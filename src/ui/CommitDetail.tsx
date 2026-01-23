@@ -62,6 +62,9 @@ export function CommitDetail({ repo, commitHash, terminalWidth }: CommitDetailPr
   }
 
   const formatDate = (date: Date) => {
+    if (Number.isNaN(date.getTime())) {
+      return "Unknown";
+    }
     return date.toLocaleString();
   };
 

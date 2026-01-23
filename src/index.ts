@@ -9,6 +9,8 @@ import {
   subWeeks,
   addDays,
   parseISO,
+  isBefore,
+  isAfter,
 } from "date-fns";
 
 import { scanForRepos, expandPath } from "./scanner.ts";
@@ -203,17 +205,25 @@ async function buildReport(
 
     if (commits.length > 0) {
       const days = groupCommitsByDay(commits);
+      // Guard against out-of-range days (e.g., git boundary quirks).
+      for (const [dateKey, day] of days) {
+        if (isBefore(day.date, startDate) || isAfter(day.date, endDate)) {
+          days.delete(dateKey);
+        }
+      }
       const totalHours = Array.from(days.values()).reduce(
         (sum, day) => sum + day.estimatedHours,
         0
       );
 
-      projects.push({
-        repo,
-        days,
-        totalCommits: commits.length,
-        totalHours: Math.round(totalHours * 10) / 10,
-      });
+      if (days.size > 0) {
+        projects.push({
+          repo,
+          days,
+          totalCommits: commits.length,
+          totalHours: Math.round(totalHours * 10) / 10,
+        });
+      }
     }
   }
 

@@ -57,8 +57,11 @@ export async function getCommits(
 }
 
 function formatDateForGit(date: Date): string {
-  // Git accepts ISO format
-  return date.toISOString().split("T")[0]!;
+  // Use local date to avoid UTC day shifts in --after/--before boundaries.
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function getAuthorsFromEnv(): string[] {
@@ -74,15 +77,17 @@ export async function getCommitDetails(
   commitHash: string
 ): Promise<CommitDetails | null> {
   try {
-    // Get commit message details: subject, body, author, email, date
-    const format = "%s|%b|%an|%ae|%aI";
-    const messageResult = await $`git -C ${repoPath} log -1 --format=${format} ${commitHash}`.quiet().text();
+    // Use non-printable separators to avoid collisions with commit content.
+    const fieldSeparator = "\x1f";
+    const format = `%s%x1f%b%x1f%an%x1f%ae%x1f%aI`;
+    const messageResult =
+      await $`git -C ${repoPath} log -1 --format=${format} ${commitHash}`.quiet().text();
 
     if (!messageResult.trim()) {
       return null;
     }
 
-    const parts = messageResult.split("|");
+    const parts = messageResult.split(fieldSeparator);
     if (parts.length < 5) {
       return null;
     }
@@ -114,7 +119,7 @@ export async function getCommitDetails(
       body: body || "",
       author: author || "",
       email: email || "",
-      date: new Date(dateStr || ""),
+      date: new Date((dateStr || "").trim()),
       files,
     };
   } catch {

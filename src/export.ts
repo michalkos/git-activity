@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { format } from "date-fns";
 import type { WeeklyReport, ProjectActivity, DayActivity } from "./types.ts";
+import { parseDateKey } from "./time-estimator.ts";
 
 export async function exportToCSV(
   report: WeeklyReport,
@@ -74,7 +75,7 @@ export async function exportToMarkdown(
   const sortedDates = Array.from(dateMap.keys()).sort();
 
   for (const dateKey of sortedDates) {
-    const date = new Date(dateKey);
+    const date = parseDateKey(dateKey);
     lines.push(`## ${format(date, "EEEE, MMM d")}`);
     lines.push("");
 

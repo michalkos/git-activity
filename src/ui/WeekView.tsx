@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import type { WeeklyReport, ProjectActivity, DayActivity } from "../types.ts";
 import { Heatmap } from "./Heatmap.tsx";
 import type { HeatmapData } from "../types.ts";
+import { parseDateKey } from "../time-estimator.ts";
 
 interface SelectableItem {
   projectPath: string;
@@ -111,7 +112,7 @@ export function WeekView({
         </Box>
       ) : (
         sortedDates.map((dateKey) => {
-          const date = new Date(dateKey);
+          const date = parseDateKey(dateKey);
           const dayProjects = dayGroups.get(dateKey)!;
 
           return (
