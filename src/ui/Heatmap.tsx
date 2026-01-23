@@ -16,7 +16,7 @@ const INTENSITY_CHARS = {
   high: "█",
 };
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 export function Heatmap({ data, weeksToShow = 3, weekOffset = 0 }: HeatmapProps) {
   // Calculate the reference date based on which week is being viewed
