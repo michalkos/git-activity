@@ -1,0 +1,31 @@
+{
+  "name": "git-activity",
+  "version": "1.0.0",
+  "description": "CLI tool to track git activity across repositories",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "git-activity": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.9"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "ink": "^6.6.0",
+    "ink-use-stdout-dimensions": "^1.0.5",
+    "react": "^19.2.3"
+  }
+}
