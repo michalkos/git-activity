@@ -141,9 +141,11 @@ src/
     ├── App.tsx           # Main Ink component
     ├── WeekView.tsx      # Weekly summary table
     ├── DayDetail.tsx     # Daily breakdown
+    ├── CommitDetail.tsx  # Commit metadata view
     ├── CommitList.tsx    # Commit messages view
     ├── Heatmap.tsx       # Activity heatmap
-    └── useNavigation.ts  # Keyboard navigation hook
+    ├── useNavigation.ts  # Keyboard navigation hook
+    └── useTerminalDimensions.ts # Terminal size hook
 ```
 
 ## License
