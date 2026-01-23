@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import type { GitCommit, GitRepo } from "./types.ts";
+import type { GitCommit, GitRepo, CommitDetails, FileChange } from "./types.ts";
 
 const COMMIT_SEPARATOR = "---COMMIT---";
 const FIELD_SEPARATOR = "|||";
@@ -67,4 +67,57 @@ export function getAuthorsFromEnv(): string[] {
     .split(",")
     .map((a) => a.trim())
     .filter((a) => a.length > 0);
+}
+
+export async function getCommitDetails(
+  repoPath: string,
+  commitHash: string
+): Promise<CommitDetails | null> {
+  try {
+    // Get commit message details: subject, body, author, email, date
+    const format = "%s|%b|%an|%ae|%aI";
+    const messageResult = await $`git -C ${repoPath} log -1 --format=${format} ${commitHash}`.quiet().text();
+
+    if (!messageResult.trim()) {
+      return null;
+    }
+
+    const parts = messageResult.split("|");
+    if (parts.length < 5) {
+      return null;
+    }
+
+    const [subject, body, author, email, dateStr] = parts;
+
+    // Get file changes
+    const filesResult = await $`git -C ${repoPath} diff-tree --no-commit-id --name-status -r ${commitHash}`.quiet().text();
+
+    const files: FileChange[] = [];
+    if (filesResult.trim()) {
+      const lines = filesResult.split("\n").filter((line) => line.trim());
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) continue;
+
+        const statusChar = trimmed[0]!.toUpperCase();
+        const path = trimmed.slice(1).trim();
+
+        if (statusChar === 'A' || statusChar === 'M' || statusChar === 'D' || statusChar === 'R') {
+          files.push({ path, status: statusChar });
+        }
+      }
+    }
+
+    return {
+      hash: commitHash,
+      subject: subject || "",
+      body: body || "",
+      author: author || "",
+      email: email || "",
+      date: new Date(dateStr || ""),
+      files,
+    };
+  } catch {
+    return null;
+  }
 }

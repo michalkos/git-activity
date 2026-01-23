@@ -5,14 +5,17 @@ interface NavigationState {
   viewState: ViewState;
   selectedIndex: number;
   maxIndex: number;
+  commitIndex: number;
 }
 
 interface NavigationActions {
   moveUp: () => void;
   moveDown: () => void;
   select: (projectPath: string, date: string) => void;
+  selectCommit: (projectPath: string, date: string, commitHash: string) => void;
   goBack: () => void;
   setMaxIndex: (max: number) => void;
+  setCommitIndex: (index: number) => void;
 }
 
 export function useNavigation(): [NavigationState, NavigationActions] {
@@ -20,6 +23,7 @@ export function useNavigation(): [NavigationState, NavigationActions] {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [maxIndex, setMaxIndex] = useState(0);
   const [previousIndex, setPreviousIndex] = useState(0);
+  const [commitIndex, setCommitIndex] = useState(0);
 
   const moveUp = useCallback(() => {
     setSelectedIndex((prev) => Math.max(0, prev - 1));
@@ -31,26 +35,40 @@ export function useNavigation(): [NavigationState, NavigationActions] {
 
   const select = useCallback((projectPath: string, date: string) => {
     setPreviousIndex(selectedIndex);
+    setCommitIndex(0); // Reset commit index when entering commits view
     setViewState({ view: "commits", projectPath, date });
   }, [selectedIndex]);
 
+  const selectCommit = useCallback((projectPath: string, date: string, commitHash: string) => {
+    setViewState({ view: "commit-detail", projectPath, date, commitHash });
+  }, []);
+
   const goBack = useCallback(() => {
-    setViewState({ view: "week" });
-    setSelectedIndex(previousIndex);
-  }, [previousIndex]);
+    if (viewState.view === "commit-detail") {
+      // Go back to commits view, preserve commit index
+      const { projectPath, date } = viewState;
+      setViewState({ view: "commits", projectPath, date });
+    } else {
+      // From commits view, go back to week view
+      setViewState({ view: "week" });
+      setSelectedIndex(previousIndex);
+    }
+  }, [viewState, previousIndex]);
 
   const updateMaxIndex = useCallback((max: number) => {
     setMaxIndex(max);
   }, []);
 
   return [
-    { viewState, selectedIndex, maxIndex },
+    { viewState, selectedIndex, maxIndex, commitIndex },
     {
       moveUp,
       moveDown,
       select,
+      selectCommit,
       goBack,
       setMaxIndex: updateMaxIndex,
+      setCommitIndex,
     },
   ];
 }

@@ -67,6 +67,11 @@ export function WeekView({
   // Sort day groups by date
   const sortedDates = Array.from(dayGroups.keys()).sort();
 
+  // Sort projects within each date group by name (to match selectableItems order)
+  for (const projects of dayGroups.values()) {
+    projects.sort((a, b) => a.project.repo.name.localeCompare(b.project.repo.name));
+  }
+
   // Calculate which item index each date-project combo maps to
   let itemIndex = 0;
   const indexMap = new Map<string, number>(); // key: `${dateKey}|${projectPath}`
@@ -119,7 +124,7 @@ export function WeekView({
                 const prefix = isLast ? "└── " : "├── ";
 
                 return (
-                  <Box key={project.repo.path} justifyContent="space-between">
+                  <Box key={`${dateKey}|${project.repo.path}`} justifyContent="space-between">
                     <Box>
                       {isSelected ? (
                         <Text backgroundColor="blue" color="white">

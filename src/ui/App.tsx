@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import type { WeeklyReport, HeatmapData, GitRepo } from "../types.ts";
 import { WeekView, getSelectableItems } from "./WeekView.tsx";
 import { CommitList } from "./CommitList.tsx";
+import { CommitDetail } from "./CommitDetail.tsx";
 import { useNavigation } from "./useNavigation.ts";
 import { useTerminalDimensions } from "./useTerminalDimensions.ts";
 
@@ -94,8 +95,8 @@ export function App({
           loadWeek(newOffset);
         }
       }
-    } else {
-      // In commit view, Escape or backspace goes back
+    } else if (navState.viewState.view === "commits" || navState.viewState.view === "commit-detail") {
+      // In commit view or commit detail view, Escape or backspace goes back
       if (key.escape || (key.backspace && !input)) {
         navActions.goBack();
       }
@@ -116,7 +117,28 @@ export function App({
     const day = project?.days.get(date);
 
     if (project && day) {
-      return <CommitList repo={project.repo} day={day} terminalWidth={terminalWidth} />;
+      return (
+        <CommitList
+          repo={project.repo}
+          day={day}
+          terminalWidth={terminalWidth}
+          selectedIndex={navState.commitIndex}
+          setSelectedIndex={navActions.setCommitIndex}
+          onSelectCommit={(commitHash) => navActions.selectCommit(projectPath, date, commitHash)}
+        />
+      );
+    }
+
+    navActions.goBack();
+    return null;
+  }
+
+  if (navState.viewState.view === "commit-detail") {
+    const { projectPath, commitHash } = navState.viewState;
+    const project = report.projects.find((p) => p.repo.path === projectPath);
+
+    if (project) {
+      return <CommitDetail repo={project.repo} commitHash={commitHash} terminalWidth={terminalWidth} />;
     }
 
     navActions.goBack();
