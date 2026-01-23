@@ -49,7 +49,7 @@ bun run src/index.ts --refresh     # Ignore cache, rescan repos
 - `ViewState`: Union type for navigation (`'week'` | `'commits'`)
 
 ### Configuration
-- Reads `.env` for `GIT_AUTHORS` (required), `GIT_SCAN_PATH`, `GIT_SCAN_DEPTH`
+- Reads `.env` for `GIT_ACTIVITY_AUTHORS` (required) and `GIT_SCAN_DEPTH`
 - Cache stored at `~/.git-activity/cache.json`
 
 ### Time Estimation Logic

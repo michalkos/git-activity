@@ -35,7 +35,7 @@ program
   .description("Track your git activity across repositories")
   .version("1.0.0")
   .option("-w, --week <offset>", "Week offset (e.g., 1 for last week, 2 for two weeks ago)", "0")
-  .option("-p, --path <path>", "Path to scan for repositories", "~/Developer/projects")
+  .option("-p, --path <path>", "Path to scan for repositories (default: current directory)")
   .option("-d, --depth <number>", "Max scan depth", "3")
   .option("--from <date>", "Start date (YYYY-MM-DD)")
   .option("--to <date>", "End date (YYYY-MM-DD)")
@@ -63,9 +63,7 @@ async function run(cmdOptions: any) {
   }
 
   // Parse options
-  const scanPath = expandPath(
-    cmdOptions.path || process.env.GIT_SCAN_PATH || "~/Developer/projects"
-  );
+  const scanPath = expandPath(cmdOptions.path || process.cwd());
   const scanDepth = parseInt(
     cmdOptions.depth || process.env.GIT_SCAN_DEPTH || "3",
     10
@@ -83,7 +81,7 @@ async function run(cmdOptions: any) {
   const authors = getAuthorsFromEnv();
   if (authors.length === 0) {
     console.error(
-      "No authors configured. Set GIT_AUTHORS in .env (comma-separated emails/names)"
+      "No authors configured. Set GIT_ACTIVITY_AUTHORS in .env (comma-separated emails/names)"
     );
     process.exit(1);
   }

@@ -65,7 +65,7 @@ function formatDateForGit(date: Date): string {
 }
 
 export function getAuthorsFromEnv(): string[] {
-  const authorsEnv = process.env.GIT_AUTHORS || "";
+  const authorsEnv = process.env.GIT_ACTIVITY_AUTHORS || "";
   return authorsEnv
     .split(",")
     .map((a) => a.trim())

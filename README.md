@@ -29,13 +29,35 @@ Create a `.env` file with your author identifiers:
 
 ```env
 # Comma-separated list of author identifiers
-GIT_AUTHORS=Your Name,your.email@example.com,alternate@email.com
-
-# Default scan path (optional)
-GIT_SCAN_PATH=~/Developer/projects
+GIT_ACTIVITY_AUTHORS=Your Name,your.email@example.com,alternate@email.com
 
 # Max scan depth (optional)
 GIT_SCAN_DEPTH=3
+```
+
+If you prefer to save the value as a shell environment variable instead of a `.env` file:
+
+```bash
+# Current shell session only
+export GIT_ACTIVITY_AUTHORS="Your Name,your.email@example.com,alternate@email.com"
+
+# Persist for future shells (zsh)
+echo 'export GIT_ACTIVITY_AUTHORS="Your Name,your.email@example.com,alternate@email.com"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Windows (PowerShell):
+
+```powershell
+# Current session only
+$env:GIT_ACTIVITY_AUTHORS = "Your Name,your.email@example.com,alternate@email.com"
+
+# Persist for future shells
+[Environment]::SetEnvironmentVariable(
+  "GIT_ACTIVITY_AUTHORS",
+  "Your Name,your.email@example.com,alternate@email.com",
+  "User"
+)
 ```
 
 ## Usage
@@ -52,7 +74,7 @@ bun run src/index.ts -w 2     # Two weeks ago
 bun run src/index.ts --from 2026-01-01 --to 2026-01-15
 
 # Options
-bun run src/index.ts --path ~/projects    # Custom scan path
+bun run src/index.ts --path ~/projects    # Custom scan root (overrides current directory)
 bun run src/index.ts --depth 4            # Scan depth
 bun run src/index.ts --json               # JSON output
 
@@ -91,6 +113,9 @@ Then run from anywhere:
 git-activity
 git-activity -w 1 --export md
 ```
+
+By default, `git-activity` scans the current directory as the root. Use `--path`
+to scan a different location.
 
 ## How Time Estimation Works
 
