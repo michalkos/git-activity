@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Box, Text } from "ink";
 import { format } from "date-fns";
 import type { WeeklyReport, ProjectActivity, DayActivity } from "../types.ts";
-import { Heatmap, calculateIntensity } from "./Heatmap.tsx";
+import { Heatmap } from "./Heatmap.tsx";
 import type { HeatmapData } from "../types.ts";
 
 interface SelectableItem {
@@ -164,7 +164,7 @@ export function WeekView({
       </Box>
 
       {/* Heatmap */}
-      <Heatmap data={heatmapData} weeksToShow={3} />
+      <Heatmap data={heatmapData} weeksToShow={3} weekOffset={weekOffset} />
 
       {/* Footer instructions */}
       <Box marginTop={1}>

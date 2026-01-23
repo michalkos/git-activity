@@ -1,11 +1,12 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import { startOfWeek, addDays, subWeeks, isSameDay } from "date-fns";
 import type { HeatmapData } from "../types.ts";
 
 interface HeatmapProps {
   data: HeatmapData[];
   weeksToShow?: number;
+  weekOffset?: number;
 }
 
 const INTENSITY_CHARS = {
@@ -17,13 +18,17 @@ const INTENSITY_CHARS = {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export function Heatmap({ data, weeksToShow = 3 }: HeatmapProps) {
-  const today = new Date();
+export function Heatmap({ data, weeksToShow = 3, weekOffset = 0 }: HeatmapProps) {
+  // Calculate the reference date based on which week is being viewed
+  const targetWeekDate = subWeeks(new Date(), weekOffset);
   const weeks: Array<{ label: string; days: HeatmapData[] }> = [];
 
-  // Generate weeks starting from oldest
+  // Generate weeks: show 2 weeks before the viewed week, then the viewed week
+  // Data is generated for weekOffset-2, weekOffset-1, weekOffset (viewed week)
   for (let w = weeksToShow - 1; w >= 0; w--) {
-    const weekStart = startOfWeek(addDays(today, -w * 7), { weekStartsOn: 1 });
+    // w=2 -> weekOffset-2 (oldest), w=1 -> weekOffset-1, w=0 -> weekOffset (viewed)
+    const actualOffset = weekOffset + w;
+    const weekStart = startOfWeek(subWeeks(new Date(), actualOffset), { weekStartsOn: 1 });
     const weekDays: HeatmapData[] = [];
 
     for (let d = 0; d < 7; d++) {
@@ -40,7 +45,7 @@ export function Heatmap({ data, weeksToShow = 3 }: HeatmapProps) {
 
     let label: string;
     if (w === 0) {
-      label = "Current";
+      label = "Viewed";
     } else if (w === 1) {
       label = "Week -1";
     } else {
