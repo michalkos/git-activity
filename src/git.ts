@@ -13,7 +13,10 @@ export async function getCommits(
   const commits: GitCommit[] = [];
 
   // Format dates for git log
-  const afterDate = formatDateForGit(from);
+  // Git's --after is exclusive, so subtract 1 day to include commits on the start date
+  const dayBefore = new Date(from);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  const afterDate = formatDateForGit(dayBefore);
   const beforeDate = formatDateForGit(to);
 
   // Build author filter (git log uses OR for multiple --author flags)
