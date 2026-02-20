@@ -2,6 +2,7 @@ export interface GitCommit {
   hash: string;
   date: Date;
   message: string;
+  branch: string;
   author: string;
   email: string;
 }

@@ -24,10 +24,11 @@ export async function getCommits(
 
   try {
     // Use a custom format to parse commits
-    // %H = hash, %aI = author date ISO, %s = subject, %an = author name, %ae = author email
-    const format = `${COMMIT_SEPARATOR}%H${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae`;
+    // %H = hash, %aI = author date ISO, %s = subject, %S = source ref, %D = decorations,
+    // %an = author name, %ae = author email
+    const format = `${COMMIT_SEPARATOR}%H${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${FIELD_SEPARATOR}%S${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae`;
 
-    const result = await $`git -C ${repo.path} log --all --after=${afterDate} --before=${beforeDate} ${authorArgs} --format=${format}`.quiet().text();
+    const result = await $`git -C ${repo.path} log --all --source --after=${afterDate} --before=${beforeDate} ${authorArgs} --format=${format}`.quiet().text();
 
     if (!result.trim()) {
       return commits;
@@ -37,12 +38,13 @@ export async function getCommits(
 
     for (const line of lines) {
       const parts = line.trim().split(FIELD_SEPARATOR);
-      if (parts.length >= 5) {
-        const [hash, dateStr, message, author, email] = parts;
+      if (parts.length >= 7) {
+        const [hash, dateStr, message, sourceRef, decorations, author, email] = parts;
         commits.push({
           hash: hash!,
           date: new Date(dateStr!),
           message: message!,
+          branch: resolveBranchName(sourceRef || "", decorations || ""),
           author: author!,
           email: email!,
         });
@@ -57,6 +59,64 @@ export async function getCommits(
   commits.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return commits;
+}
+
+function resolveBranchName(sourceRef: string, decorations: string): string {
+  const normalizedSource = normalizeRefName(sourceRef.trim());
+  if (normalizedSource) {
+    return normalizedSource;
+  }
+
+  const fromDecorations = inferBranchFromDecorations(decorations);
+  if (fromDecorations) {
+    return fromDecorations;
+  }
+
+  return "unknown";
+}
+
+function normalizeRefName(refName: string): string | null {
+  if (!refName) return null;
+
+  if (refName.startsWith("refs/heads/")) {
+    return refName.slice("refs/heads/".length);
+  }
+
+  if (refName.startsWith("refs/remotes/")) {
+    return refName.slice("refs/remotes/".length);
+  }
+
+  if (refName === "HEAD") {
+    return "HEAD";
+  }
+
+  return refName;
+}
+
+function inferBranchFromDecorations(decorations: string): string | null {
+  if (!decorations.trim()) {
+    return null;
+  }
+
+  const refs = decorations
+    .split(",")
+    .map((ref) => ref.trim())
+    .flatMap((ref) => {
+      // Handle "HEAD -> main" syntax by considering both parts.
+      if (ref.includes("->")) {
+        return ref.split("->").map((part) => part.trim());
+      }
+      return [ref];
+    });
+
+  for (const ref of refs) {
+    const normalized = normalizeRefName(ref);
+    if (normalized && normalized !== "HEAD") {
+      return normalized;
+    }
+  }
+
+  return refs.length > 0 ? refs[0] || null : null;
 }
 
 function formatDateForGit(date: Date): string {
