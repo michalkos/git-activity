@@ -11,6 +11,37 @@ A Bun-based CLI tool that scans directories for git repositories and generates w
 - Export to CSV and Markdown formats
 - Repository caching for faster subsequent runs
 
+## Preview
+
+```
+╭─────────────────────────────────────────────────────────────────────────────
+│ Week: Feb 16 - Feb 22, 2026                                  (Current Week)
+│ ────────────────────────────────────────────────────────────────────────────
+│ Monday, Feb 16
+│ └── git-activity (~/Developer/projects/git-activity)           ~2h  3 commits
+│
+│ Wednesday, Feb 18
+│ ├── api-service (~/Developer/projects/api-service)           ~1.5h  2 commits
+│ └── frontend-app (~/Developer/projects/frontend-app)         ~0.5h  1 commit
+│
+│ Thursday, Feb 19
+│ └── git-activity (~/Developer/projects/git-activity)           ~3h  5 commits
+│ ────────────────────────────────────────────────────────────────────────────
+│ Weekly Total: ~7h across 3 projects
+│
+│          Mo Tu We Th Fr Sa Su
+│ Week -2  ·· ·· ░░ ·· ·· ·· ··
+│ Week -1  ░░ ·· ·· ▓▓ ·· ·· ··
+│ Viewed   ░░ ·· ▓▓ ▓▓ ·· ·· ··
+│
+│           └─ Intensity: · none  ░░ low  ▓▓ medium  ██ high
+│
+│ [↑↓] Navigate  [←→] Week  [Enter] Details  [q] Quit
+╰─────────────────────────────────────────────────────────────────────────────
+```
+
+> The currently selected row is highlighted in blue. Use `↑`/`↓` to navigate rows and `Enter` to drill into commits for that day.
+
 ## Installation
 
 ```bash
@@ -89,11 +120,15 @@ bun run src/index.ts --clear-cache        # Remove cached repo list
 
 ## Interactive Navigation
 
-- `↑`/`↓` - Navigate between projects/days
-- `←`/`→` - Navigate to previous/next week
-- `Enter` - View commit details for selected project/day
-- `Esc` - Go back to week view
-- `q` - Quit
+The TUI has three levels: **week view** → **commit list** → **commit detail**.
+
+| Key | Week view | Commit list | Commit detail |
+|-----|-----------|-------------|---------------|
+| `↑` / `↓` | Navigate rows | Navigate commits | — |
+| `←` / `→` | Previous / next week | — | — |
+| `Enter` | Open commit list for selected day | Open commit detail | — |
+| `Esc` / `Backspace` | — | Back to week view | Back to commit list |
+| `q` | Quit | Quit | Quit |
 
 ## Global Installation
 
@@ -138,13 +173,13 @@ src/
 ├── export.ts          # CSV/Markdown report generation
 ├── types.ts           # TypeScript interfaces
 └── ui/
-    ├── App.tsx           # Main Ink component
+    ├── App.tsx           # Main Ink component, keyboard input, week navigation
     ├── WeekView.tsx      # Weekly summary table
-    ├── DayDetail.tsx     # Daily breakdown
-    ├── CommitDetail.tsx  # Commit metadata view
-    ├── CommitList.tsx    # Commit messages view
+    ├── CommitList.tsx    # Commit list grouped by branch (with navigation)
+    ├── CommitDetail.tsx  # Single commit detail (files changed, metadata)
+    ├── DayDetail.tsx     # Daily breakdown (unused/legacy)
     ├── Heatmap.tsx       # Activity heatmap
-    ├── useNavigation.ts  # Keyboard navigation hook
+    ├── useNavigation.ts  # View state and keyboard navigation hook
     └── useTerminalDimensions.ts # Terminal size hook
 ```
 
