@@ -61,11 +61,17 @@ export function calculateSessionDuration(session: WorkSession): number {
   const commits = [...session.commits].sort(
     (a, b) => a.date.getTime() - b.date.getTime()
   );
+  const firstCommit = commits.at(0);
+  if (!firstCommit) {
+    return MIN_SESSION_TIME;
+  }
 
   let duration = BUFFER_BEFORE_FIRST + BUFFER_AFTER_LAST;
-  for (let i = 1; i < commits.length; i++) {
-    const gap = commits[i]!.date.getTime() - commits[i - 1]!.date.getTime();
+  let previous = firstCommit;
+  for (const current of commits.slice(1)) {
+    const gap = current.date.getTime() - previous.date.getTime();
     duration += Math.min(gap, MAX_ACTIVE_GAP);
+    previous = current;
   }
 
   // Ensure minimum session time
