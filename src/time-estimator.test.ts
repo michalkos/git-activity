@@ -62,6 +62,7 @@ describe("time estimation", () => {
     const large = createSession([createCommit("b", "2026-01-01T10:00:00.000Z", { additions: 500, deletions: 300 })]);
 
     expect(calculateSessionDuration(large)).toBeGreaterThan(calculateSessionDuration(small));
+    // 30m base + 50m churn bonus (800 changed lines => 10 * 5m) = 80m => 1.3h
     expect(calculateTotalHours([large])).toBe(1.3);
   });
 });

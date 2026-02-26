@@ -49,8 +49,8 @@ export async function getCommits(
         let deletions = 0;
         let filesChanged = 0;
         for (const statLine of commitLines.slice(1)) {
-          const [added, deleted] = statLine.split("\t");
-          if (added === undefined || deleted === undefined) continue;
+          const [added, deleted, filePath] = statLine.split("\t");
+          if (added === undefined || deleted === undefined || filePath === undefined) continue;
           const addedCount = Number(added);
           const deletedCount = Number(deleted);
           if (!Number.isNaN(addedCount)) {
