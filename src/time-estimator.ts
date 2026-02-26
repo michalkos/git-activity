@@ -6,6 +6,9 @@ const MIN_SESSION_TIME = 30 * 60 * 1000; // 30 minutes minimum per session
 const BUFFER_BEFORE_FIRST = 15 * 60 * 1000; // 15 min buffer before first commit
 const BUFFER_AFTER_LAST = 15 * 60 * 1000; // 15 min buffer after last commit
 const MAX_ACTIVE_GAP = 60 * 60 * 1000; // cap each intra-session gap to 60 minutes
+const COMMIT_SIZE_UNIT = 80; // changed lines per 5-minute bonus step
+const COMMIT_SIZE_BONUS_STEP = 5 * 60 * 1000; // 5 minutes per size step
+const MAX_COMMIT_SIZE_BONUS = 90 * 60 * 1000; // cap bonus from commit size at 90 minutes
 
 export function estimateWorkSessions(commits: GitCommit[]): WorkSession[] {
   if (commits.length === 0) {
@@ -73,6 +76,16 @@ export function calculateSessionDuration(session: WorkSession): number {
     duration += Math.min(gap, MAX_ACTIVE_GAP);
     previous = current;
   }
+
+  const largestCommitChurn = commits.reduce((max, commit) => {
+    const churn = (commit.additions || 0) + (commit.deletions || 0);
+    return Math.max(max, churn);
+  }, 0);
+  const sizeBonus = Math.min(
+    Math.floor(largestCommitChurn / COMMIT_SIZE_UNIT) * COMMIT_SIZE_BONUS_STEP,
+    MAX_COMMIT_SIZE_BONUS
+  );
+  duration += sizeBonus;
 
   // Ensure minimum session time
   return Math.max(duration, MIN_SESSION_TIME);

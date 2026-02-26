@@ -6,7 +6,11 @@ import {
 } from "./time-estimator.ts";
 import type { GitCommit, WorkSession } from "./types.ts";
 
-function createCommit(hash: string, isoDate: string): GitCommit {
+function createCommit(
+  hash: string,
+  isoDate: string,
+  churn: { additions?: number; deletions?: number } = {}
+): GitCommit {
   return {
     hash,
     date: new Date(isoDate),
@@ -14,6 +18,8 @@ function createCommit(hash: string, isoDate: string): GitCommit {
     branch: "main",
     author: "Tester",
     email: "tester@example.com",
+    additions: churn.additions ?? 0,
+    deletions: churn.deletions ?? 0,
   };
 }
 
@@ -49,5 +55,13 @@ describe("time estimation", () => {
     ]);
 
     expect(sessions).toHaveLength(2);
+  });
+
+  test("adds extra time for very large commit changes", () => {
+    const small = createSession([createCommit("a", "2026-01-01T10:00:00.000Z", { additions: 10, deletions: 5 })]);
+    const large = createSession([createCommit("b", "2026-01-01T10:00:00.000Z", { additions: 500, deletions: 300 })]);
+
+    expect(calculateSessionDuration(large)).toBeGreaterThan(calculateSessionDuration(small));
+    expect(calculateTotalHours([large])).toBe(1.3);
   });
 });

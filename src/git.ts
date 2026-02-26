@@ -28,7 +28,7 @@ export async function getCommits(
     // %an = author name, %ae = author email
     const format = `${COMMIT_SEPARATOR}%H${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${FIELD_SEPARATOR}%S${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae`;
 
-    const result = await $`git -C ${repo.path} log --all --source --after=${afterDate} --before=${beforeDate} ${authorArgs} --format=${format}`.quiet().text();
+    const result = await $`git -C ${repo.path} log --all --source --numstat --after=${afterDate} --before=${beforeDate} ${authorArgs} --format=${format}`.quiet().text();
 
     if (!result.trim()) {
       return commits;
@@ -37,9 +37,31 @@ export async function getCommits(
     const lines = result.split(COMMIT_SEPARATOR).filter((line) => line.trim());
 
     for (const line of lines) {
-      const parts = line.trim().split(FIELD_SEPARATOR);
+      const commitLines = line
+        .trim()
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      const parts = (commitLines[0] || "").split(FIELD_SEPARATOR);
       if (parts.length >= 7) {
         const [hash, dateStr, message, sourceRef, decorations, author, email] = parts;
+        let additions = 0;
+        let deletions = 0;
+        let filesChanged = 0;
+        for (const statLine of commitLines.slice(1)) {
+          const [added, deleted] = statLine.split("\t");
+          if (added === undefined || deleted === undefined) continue;
+          const addedCount = Number(added);
+          const deletedCount = Number(deleted);
+          if (!Number.isNaN(addedCount)) {
+            additions += addedCount;
+          }
+          if (!Number.isNaN(deletedCount)) {
+            deletions += deletedCount;
+          }
+          filesChanged += 1;
+        }
+
         commits.push({
           hash: hash!,
           date: new Date(dateStr!),
@@ -47,6 +69,9 @@ export async function getCommits(
           branch: resolveBranchName(sourceRef || "", decorations || ""),
           author: author!,
           email: email!,
+          additions,
+          deletions,
+          filesChanged,
         });
       }
     }

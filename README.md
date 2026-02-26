@@ -159,6 +159,7 @@ The tool analyzes commit timestamps within each day and estimates work sessions:
 - Commits within 2 hours of each other are grouped into sessions
 - A 15-minute buffer is added before the first and after the last commit
 - Long inactive gaps between commits inside one session are capped at 60 minutes
+- Large commits (many changed lines) add bounded extra estimated effort
 - Minimum session time is 30 minutes
 - Total hours are calculated from session durations
 

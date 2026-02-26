@@ -5,6 +5,9 @@ export interface GitCommit {
   branch: string;
   author: string;
   email: string;
+  additions?: number;
+  deletions?: number;
+  filesChanged?: number;
 }
 
 export interface GitRepo {
