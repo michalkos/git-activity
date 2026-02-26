@@ -5,6 +5,7 @@ const SESSION_GAP_THRESHOLD = 2 * 60 * 60 * 1000; // 2 hours - gap that starts n
 const MIN_SESSION_TIME = 30 * 60 * 1000; // 30 minutes minimum per session
 const BUFFER_BEFORE_FIRST = 15 * 60 * 1000; // 15 min buffer before first commit
 const BUFFER_AFTER_LAST = 15 * 60 * 1000; // 15 min buffer after last commit
+const MAX_ACTIVE_GAP = 60 * 60 * 1000; // cap each intra-session gap to 60 minutes
 
 export function estimateWorkSessions(commits: GitCommit[]): WorkSession[] {
   if (commits.length === 0) {
@@ -57,7 +58,16 @@ function createSession(commits: GitCommit[]): WorkSession {
 }
 
 export function calculateSessionDuration(session: WorkSession): number {
-  const duration = session.end.getTime() - session.start.getTime();
+  const commits = [...session.commits].sort(
+    (a, b) => a.date.getTime() - b.date.getTime()
+  );
+
+  let duration = BUFFER_BEFORE_FIRST + BUFFER_AFTER_LAST;
+  for (let i = 1; i < commits.length; i++) {
+    const gap = commits[i]!.date.getTime() - commits[i - 1]!.date.getTime();
+    duration += Math.min(gap, MAX_ACTIVE_GAP);
+  }
+
   // Ensure minimum session time
   return Math.max(duration, MIN_SESSION_TIME);
 }
