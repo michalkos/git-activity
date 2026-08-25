@@ -8,7 +8,6 @@ import {
   endOfWeek,
   subWeeks,
   addDays,
-  parseISO,
   isBefore,
   isAfter,
 } from "date-fns";
@@ -20,19 +19,23 @@ import { getCachedRepos, clearCache } from "./cache.ts";
 import { exportToCSV, exportToMarkdown, formatReportAsJSON } from "./export.ts";
 import { App } from "./ui/App.tsx";
 import { calculateIntensity } from "./ui/Heatmap.tsx";
+import { getDateRange } from "./dates.ts";
+import { runAgentsCommand } from "./agents/cli.ts";
 import type {
   WeeklyReport,
   ProjectActivity,
-  CLIOptions,
   HeatmapData,
   GitCommit,
 } from "./types.ts";
 
 const program = new Command();
+program.enablePositionalOptions();
 
 program
   .name("git-activity")
-  .description("Track your git activity across repositories")
+  .description(
+    "Track your git activity across repositories. Use the agents subcommand for local AI-agent sessions."
+  )
   .version("1.0.0")
   .option("-w, --week <offset>", "Week offset (e.g., 1 for last week, 2 for two weeks ago)", "0")
   .option("-p, --path <path>", "Path to scan for repositories (default: current directory)")
@@ -46,6 +49,26 @@ program
   .action(async (options) => {
     try {
       await run(options);
+    } catch (error) {
+      console.error("Error:", error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("agents")
+  .description("Track local AI agent activity")
+  .option("-w, --week <offset>", "Week offset (e.g., 1 for last week, 2 for two weeks ago)", "0")
+  .option("--from <date>", "Start date (YYYY-MM-DD)")
+  .option("--to <date>", "End date (YYYY-MM-DD)")
+  .option("-j, --json", "Output as JSON")
+  .option("-e, --export <format>", "Export to file (csv or md)")
+  .option("--select", "Pick which detected agents to include")
+  .option("--list", "Print detection table and exit")
+  .option("--agents <ids>", "Comma-separated agent ids (claude,cursor,pi,codex,copilot,vscode-copilot)")
+  .action(async (options) => {
+    try {
+      await runAgentsCommand(options);
     } catch (error) {
       console.error("Error:", error instanceof Error ? error.message : error);
       process.exit(1);
@@ -160,29 +183,6 @@ async function run(cmdOptions: any) {
       buildHeatmapData: buildHeatmapFn,
     })
   );
-}
-
-function getDateRange(
-  weeksBack: number,
-  fromStr: string | undefined,
-  toStr: string | undefined
-): { startDate: Date; endDate: Date } {
-  const now = new Date();
-
-  // Custom date range takes precedence
-  if (fromStr && toStr) {
-    return {
-      startDate: parseISO(fromStr),
-      endDate: parseISO(toStr),
-    };
-  }
-
-  const targetDate = subWeeks(now, weeksBack);
-  // Week starts on Monday
-  const startDate = startOfWeek(targetDate, { weekStartsOn: 1 });
-  const endDate = endOfWeek(targetDate, { weekStartsOn: 1 });
-
-  return { startDate, endDate };
 }
 
 async function buildReport(

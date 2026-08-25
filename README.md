@@ -118,6 +118,26 @@ bun run src/index.ts --refresh            # Force rescan repos (ignore cache)
 bun run src/index.ts --clear-cache        # Remove cached repo list
 ```
 
+## Agent activity
+
+`git-activity agents` is a sibling report for **local AI-agent sessions** (Claude Code first; Pi, Codex, Copilot, VS Code, and Cursor are detected but not fully parsed yet). Git remains the default command.
+
+```bash
+# Current week of agent sessions
+bun run src/index.ts agents --json --agents claude
+
+# Last week
+bun run src/index.ts agents -w 1 --agents claude --export md
+
+# Show what is installed locally
+bun run src/index.ts agents --list
+
+# Interactive picker (saved to ~/.git-activity/agents.json)
+bun run src/index.ts agents --select
+```
+
+Hours come from session timestamps with a 15-minute minimum. Overlapping sessions on the same project are merged so two agents on one afternoon are not double-counted. Reports include metadata and truncated user prompts only — never assistant text or tool output.
+
 ## Interactive Navigation
 
 The TUI has three levels: **week view** → **commit list** → **commit detail**.
@@ -166,17 +186,23 @@ The tool analyzes commit timestamps within each day and estimates work sessions:
 ```
 src/
 ├── index.ts           # Entry point, Commander setup
+├── dates.ts           # Shared week / date-range parsing
 ├── scanner.ts         # Git repository discovery
 ├── git.ts             # Git log parsing
 ├── time-estimator.ts  # Work time estimation logic
 ├── cache.ts           # Repo cache management (~/.git-activity)
 ├── export.ts          # CSV/Markdown report generation
 ├── types.ts           # TypeScript interfaces
+├── agents/            # Agent activity (detection, Claude adapter, report)
 └── ui/
     ├── App.tsx           # Main Ink component, keyboard input, week navigation
     ├── WeekView.tsx      # Weekly summary table
     ├── CommitList.tsx    # Commit list grouped by branch (with navigation)
     ├── CommitDetail.tsx  # Single commit detail (files changed, metadata)
+    ├── AgentApp.tsx      # Agent week TUI
+    ├── AgentPicker.tsx   # First-run / --select multi-select
+    ├── SessionList.tsx   # Agent sessions for a project/day
+    ├── SessionDetail.tsx # User prompts only
     ├── DayDetail.tsx     # Daily breakdown (unused/legacy)
     ├── Heatmap.tsx       # Activity heatmap
     ├── useNavigation.ts  # View state and keyboard navigation hook

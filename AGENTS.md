@@ -24,6 +24,10 @@ bun run src/index.ts --from 2026-01-01 --to 2026-01-15  # Date range
 bun run src/index.ts --export csv  # Export to CSV
 bun run src/index.ts --json        # JSON output
 bun run src/index.ts --refresh     # Ignore cache, rescan repos
+
+# Agent activity (local AI tools)
+bun run src/index.ts agents --list
+bun run src/index.ts agents --agents claude --json
 ```
 
 ## Architecture
@@ -34,6 +38,8 @@ bun run src/index.ts --refresh     # Ignore cache, rescan repos
 3. **Commit extraction** (`git.ts`): Runs `git log` via Bun's `$` shell, parses custom format
 4. **Time estimation** (`time-estimator.ts`): Groups commits into work sessions (2hr gap threshold)
 5. **Rendering** (`ui/`): Ink components display results in terminal
+
+Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools → filter by `~/.git-activity/agents.json` → each adapter lists sessions → group by project cwd → merge overlapping intervals → TUI / export. Claude Code is the first parsed source; other tools are detected only in this phase.
 
 ### UI Components (Ink/React)
 - `App.tsx`: Root component, handles view state switching and keyboard input
@@ -50,7 +56,8 @@ bun run src/index.ts --refresh     # Ignore cache, rescan repos
 
 ### Configuration
 - Reads `.env` for `GIT_ACTIVITY_AUTHORS` (required) and `GIT_SCAN_DEPTH`
-- Cache stored at `~/.git-activity/cache.json`
+- Cache stored at `~/.git-activity/repos.json`
+- Agent selection stored at `~/.git-activity/agents.json`
 
 ### Time Estimation Logic
 - Commits within 2 hours are grouped into sessions
