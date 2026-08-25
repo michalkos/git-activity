@@ -105,6 +105,11 @@ export async function runAgentsCommand(options: AgentsCliOptions): Promise<void>
     enabledSources.map((source) => [source.id, source])
   );
 
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.error("Interactive TUI requires a TTY. Use --json or --export.");
+    process.exit(1);
+  }
+
   const buildReportFn = async (weekOffset: number) => {
     const range = getDateRange(weekOffset);
     const from = startOfWeek(subWeeks(new Date(), weekOffset + 2), {

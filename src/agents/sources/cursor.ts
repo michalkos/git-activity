@@ -6,8 +6,8 @@ import type { AgentSource } from "./types.ts";
 
 /**
  * Cursor agent transcripts.
- * v1 source of truth: ~/.cursor/projects/*/agent-transcripts/**/*.jsonl
- * Chat DBs (~/.cursor/chats/*/*/store.db) and composer state.vscdb are later.
+ * v1 source of truth: ~/.cursor/projects/<id>/agent-transcripts/ (jsonl files, nested).
+ * Chat DBs (~/.cursor/chats/<id>/<id>/store.db) and composer state.vscdb are later.
  *
  * v1: detection only. Session parsing is Phase 3.
  */

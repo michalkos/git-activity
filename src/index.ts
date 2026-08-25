@@ -29,6 +29,7 @@ import type {
 } from "./types.ts";
 
 const program = new Command();
+program.enablePositionalOptions();
 
 program
   .name("git-activity")
