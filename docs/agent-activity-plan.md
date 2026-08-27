@@ -259,22 +259,35 @@ Project path: decode from `~/.cursor/projects/<encoded-cwd>/`. Session id from t
 - Week view, session list, session detail, heatmap, `--json` / `--export`.
 - This is the first usable command.
 
-### Phase 2 — documented / indexed CLIs
+### Phase 2 — documented / indexed CLIs — done
 
 - Pi, Codex, Copilot CLI.
 - Same TUI. Tags start showing multiple sources per project.
+- Copilot CLI reads `workspace.yaml` + `events.jsonl` instead of `session-store.db`:
+  the files carry the same fields and cannot be locked out from under the report.
 
-### Phase 3 — editor stores
+### Phase 3 — editor stores — done
 
-- VS Code Copilot Chat.
-- Cursor transcripts + `store.db` meta.
+- VS Code Copilot Chat. Two shapes in the wild: a `.json` snapshot and a `.jsonl`
+  append journal (kind 0 snapshot / kind 1 set / kind 2 append), reduced to one
+  record. Chats with no requests are dropped, and `creationDate` is ignored in
+  favour of the first request — a panel can sit open for months.
+- Cursor transcripts. `store.db` turned out not to be needed: the JSONL carries
+  the prompts and turn counts, file creation/write times carry the session
+  window (the transcripts have no timestamps of their own), and project paths are
+  decoded by matching each flattened directory segment against what is actually
+  on disk.
 
 ### Phase 4 — harden
 
-- Overlap merging across agents (if not already in phase 1).
-- Adapter tests against fixture JSONL/SQLite snippets (no live home-dir dependency).
-- Skip unreadable files with a one-line stderr warning, never abort the report.
+- Overlap merging across agents — done in phase 1.
+- Adapter tests against fixture JSONL snippets (no live home-dir dependency) — done.
+- Skip unreadable files with a one-line stderr warning, never abort the report — done.
 - Optional `--path` filter to keep only sessions whose cwd is under a root (parity with git `--path`).
+- **Idle gaps.** A session is still timed end-to-start, so a chat left open
+  overnight bills every one of those hours. Splitting a session at a long gap
+  needs adapters to hand back their activity timestamps, which every source but
+  Cursor already streams.
 
 Do not wait for phase 4 to merge 1–3. Each phase should be shippable.
 

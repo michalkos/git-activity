@@ -1,0 +1,7 @@
+{"type":"session","version":3,"id":"sess-pi","timestamp":"2026-02-16T10:00:00.000Z","cwd":"/Users/demo/git-activity"}
+{"type":"model_change","timestamp":"2026-02-16T10:00:01.000Z","provider":"zai","modelId":"glm-5.2"}
+{"type":"message","timestamp":"2026-02-16T10:00:05.000Z","message":{"role":"user","content":[{"type":"text","text":"<skill name=\"testing\">wrapped context</skill>"}]}}
+{"type":"message","timestamp":"2026-02-16T10:00:10.000Z","message":{"role":"user","content":[{"type":"text","text":"Fix the\nlogin redirect"}]}}
+{"type":"message","timestamp":"2026-02-16T10:00:20.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"hmm"},{"type":"toolCall","name":"Read"}]}}
+not json
+{"type":"message","timestamp":"2026-02-16T10:30:00.000Z","message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}

@@ -1,16 +1,20 @@
-import { createReadStream } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { createInterface } from "node:readline";
-import { formatDateKey } from "../../time-estimator.ts";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import { warnAdapter } from "../log.ts";
+import {
+  isUntouchedSince,
+  isWrappedPrompt,
+  parseTimestamp,
+  PROMPT_MAX,
+  readJsonLines,
+  startedInRange,
+  titleFrom,
+  truncate,
+} from "./common.ts";
 import { countMatchingFiles, isDirectory } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
 import type { AgentSession } from "../types.ts";
-
-const TITLE_MAX = 80;
-const PROMPT_MAX = 200;
 
 interface ClaudeSourceOptions {
   projectsDir?: string;
@@ -70,14 +74,14 @@ export function createClaudeSource(
 
       for (const filePath of files) {
         try {
-          if (await isOlderThan(filePath, from)) {
+          if (await isUntouchedSince(filePath, from)) {
             continue;
           }
           const parsed = await parseSessionMeta(filePath);
           if (!parsed) {
             continue;
           }
-          if (startedInRange(parsed.session, from, to)) {
+          if (startedInRange(parsed.session.startedAt, from, to)) {
             sessions.push(parsed.session);
           }
         } catch (error) {
@@ -141,20 +145,6 @@ async function listSessionFiles(projectsDir: string): Promise<string[]> {
   return files;
 }
 
-async function isOlderThan(filePath: string, from: Date): Promise<boolean> {
-  try {
-    const info = await stat(filePath);
-    return info.mtime.getTime() < from.getTime();
-  } catch {
-    return false;
-  }
-}
-
-function startedInRange(session: AgentSession, from: Date, to: Date): boolean {
-  const key = formatDateKey(session.startedAt);
-  return key >= formatDateKey(from) && key <= formatDateKey(to);
-}
-
 async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
   let sessionId: string | undefined;
   let cwd: string | undefined;
@@ -169,7 +159,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
   let model: string | undefined;
   let malformed = false;
 
-  for await (const event of readClaudeEvents(filePath, () => {
+  for await (const event of readJsonLines<ClaudeEvent>(filePath, () => {
     malformed = true;
   })) {
     if (event.sessionId && !sessionId) {
@@ -193,7 +183,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
       if (text) {
         userTurns += 1;
         firstUserPrompt ??= text;
-        if (!isCommandWrapper(text)) {
+        if (!isWrappedPrompt(text)) {
           firstRealPrompt ??= text;
         }
       }
@@ -213,9 +203,8 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
   }
 
   const projectPath = cwd || "(unknown)";
-  const title = truncate(
-    summaryTitle || firstRealPrompt || firstUserPrompt || basename(filePath, ".jsonl"),
-    TITLE_MAX
+  const title = titleFrom(
+    summaryTitle || firstRealPrompt || firstUserPrompt || basename(filePath, ".jsonl")
   );
 
   return {
@@ -238,7 +227,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
 
 async function collectUserPrompts(filePath: string): Promise<string[]> {
   const prompts: string[] = [];
-  for await (const event of readClaudeEvents(filePath, () => {})) {
+  for await (const event of readJsonLines<ClaudeEvent>(filePath)) {
     if (event.type !== "user") {
       continue;
     }
@@ -248,40 +237,6 @@ async function collectUserPrompts(filePath: string): Promise<string[]> {
     }
   }
   return prompts;
-}
-
-async function* readClaudeEvents(
-  filePath: string,
-  onMalformed: () => void
-): AsyncGenerator<ClaudeEvent> {
-  const rl = createInterface({
-    input: createReadStream(filePath, { encoding: "utf-8" }),
-    crlfDelay: Infinity,
-  });
-
-  try {
-    for await (const line of rl) {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        continue;
-      }
-      try {
-        yield JSON.parse(trimmed) as ClaudeEvent;
-      } catch {
-        onMalformed();
-      }
-    }
-  } finally {
-    rl.close();
-  }
-}
-
-function parseTimestamp(value: string | undefined): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 function extractUserText(event: ClaudeEvent): string | null {
@@ -315,10 +270,6 @@ function extractUserText(event: ClaudeEvent): string | null {
   return text.length > 0 ? text : null;
 }
 
-function isCommandWrapper(text: string): boolean {
-  return text.startsWith("<command-") || text.startsWith("<local-command-");
-}
-
 function countToolUses(event: ClaudeEvent): number {
   const content = event.message?.content;
   if (!Array.isArray(content)) {
@@ -333,9 +284,3 @@ function countToolUses(event: ClaudeEvent): number {
   return count;
 }
 
-function truncate(value: string, maxLength: number): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return value.slice(0, maxLength - 3) + "...";
-}

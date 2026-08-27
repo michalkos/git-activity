@@ -120,14 +120,14 @@ bun run src/index.ts --clear-cache        # Remove cached repo list
 
 ## Agent activity
 
-`git-activity agents` is a sibling report for **local AI-agent sessions** (Claude Code first; Pi, Codex, Copilot, VS Code, and Cursor are detected but not fully parsed yet). Git remains the default command.
+`git-activity agents` is a sibling report for **local AI-agent sessions** from Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, and Cursor. Git remains the default command.
 
 ```bash
 # Current week of agent sessions
-bun run src/index.ts agents --json --agents claude
+bun run src/index.ts agents --json
 
 # Last week
-bun run src/index.ts agents -w 1 --agents claude --export md
+bun run src/index.ts agents -w 1 --export md
 
 # Show what is installed locally
 bun run src/index.ts agents --list
@@ -193,7 +193,7 @@ src/
 ├── cache.ts           # Repo cache management (~/.git-activity)
 ├── export.ts          # CSV/Markdown report generation
 ├── types.ts           # TypeScript interfaces
-├── agents/            # Agent activity (detection, Claude adapter, report)
+├── agents/            # Agent activity (detection, source adapters, report)
 └── ui/
     ├── App.tsx           # Main Ink component, keyboard input, week navigation
     ├── WeekView.tsx      # Weekly summary table
@@ -201,8 +201,10 @@ src/
     ├── CommitDetail.tsx  # Single commit detail (files changed, metadata)
     ├── AgentApp.tsx      # Agent week TUI
     ├── AgentPicker.tsx   # First-run / --select multi-select
-    ├── SessionList.tsx   # Agent sessions for a project/day
-    ├── SessionDetail.tsx # User prompts only
+    ├── SessionList.tsx   # Agent sessions for a project/day, grouped by source
+    ├── SessionDetail.tsx # Session metadata and user prompts only
+    ├── sessionRows.ts    # Session grouping, column widths, scroll windows
+    ├── format.ts         # Shared truncation and model-name formatting
     ├── DayDetail.tsx     # Daily breakdown (unused/legacy)
     ├── Heatmap.tsx       # Activity heatmap
     ├── useNavigation.ts  # View state and keyboard navigation hook

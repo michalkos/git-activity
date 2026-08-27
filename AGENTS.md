@@ -39,7 +39,7 @@ bun run src/index.ts agents --agents claude --json
 4. **Time estimation** (`time-estimator.ts`): Groups commits into work sessions (2hr gap threshold)
 5. **Rendering** (`ui/`): Ink components display results in terminal
 
-Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools → filter by `~/.git-activity/agents.json` → each adapter lists sessions → group by project cwd → merge overlapping intervals → TUI / export. Claude Code is the first parsed source; other tools are detected only in this phase.
+Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools → filter by `~/.git-activity/agents.json` → each adapter lists sessions → group by project cwd → merge overlapping intervals → TUI / export. All six sources parse sessions: Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, and Cursor. Each adapter lives in its own file under `src/agents/sources/` with a fixture test, streams JSONL rather than loading transcripts, and reports a broken file as a warning so one bad source never fails the report. Shared parsing helpers live in `sources/common.ts`.
 
 ### UI Components (Ink/React)
 - `App.tsx`: Root component, handles view state switching and keyboard input
@@ -47,6 +47,7 @@ Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools
 - `CommitList.tsx`: Detail view for commits on a specific day
 - `Heatmap.tsx`: GitHub-style activity visualization
 - `useNavigation.ts`: Keyboard navigation state management hook
+- `SessionList.tsx` / `SessionDetail.tsx`: Agent day and session views; their layout maths (source grouping, column widths, scroll windows) live in `sessionRows.ts` so the components stay declarative. Columns are ASCII and sized against `terminalWidth - 4` — ambiguous-width glyphs break the alignment.
 
 ### Key Types (`types.ts`)
 - `WeeklyReport`: Top-level report containing `ProjectActivity[]`

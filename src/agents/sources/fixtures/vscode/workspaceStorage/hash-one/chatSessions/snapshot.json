@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sessionId": "sess-vscode-json",
+  "creationDate": 1739700000000,
+  "lastMessageDate": 1771236300000,
+  "customTitle": "Fix the login redirect",
+  "requests": [
+    { "requestId": "r1", "timestamp": 1771236000000, "elapsedMs": 5000, "modelId": "copilot/gpt-5.6", "message": { "text": "Fix the login redirect" },
+      "response": [ { "kind": "toolInvocationSerialized" }, { "kind": "markdownContent" } ] },
+    { "requestId": "r2", "timestamp": 1771236120000, "elapsedMs": 1000, "modelId": "copilot/gpt-5.6", "message": { "text": "Also add a test" }, "response": [] }
+  ]
+}

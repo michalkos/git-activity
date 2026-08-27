@@ -29,7 +29,7 @@ export function AgentApp({
 }: AgentAppProps) {
   const { exit } = useApp();
   const [navState, navActions] = useAgentNavigation();
-  const [terminalWidth] = useTerminalDimensions();
+  const [terminalWidth, terminalHeight] = useTerminalDimensions();
   const [weekOffset, setWeekOffset] = useState(initialWeekOffset);
   const [report, setReport] = useState(initialReport);
   const [heatmapData, setHeatmapData] = useState(initialHeatmapData);
@@ -113,6 +113,7 @@ export function AgentApp({
           project={project}
           day={day}
           terminalWidth={terminalWidth}
+          terminalHeight={terminalHeight}
           selectedIndex={navState.sessionIndex}
           setSelectedIndex={navActions.setSessionIndex}
           onSelectSession={(sessionId) =>
@@ -137,6 +138,7 @@ export function AgentApp({
           session={session}
           loadPrompts={loadPrompts}
           terminalWidth={terminalWidth}
+          terminalHeight={terminalHeight}
         />
       );
     }

@@ -1,0 +1,7 @@
+{"kind": 0, "v": {"version": 3, "sessionId": "sess-vscode-jsonl", "creationDate": 1739700000000, "requests": []}}
+{"kind": 1, "k": ["customTitle"], "v": "\"Journalled chat\""}
+{"kind": 2, "k": ["requests"], "v": "[{\"requestId\": \"r1\", \"timestamp\": 1771236000000, \"modelId\": \"copilot/claude-sonnet-5\", \"message\": {\"text\": \"Start the migration\"}}]"}
+{"kind": 2, "k": ["requests", 0, "response"], "v": "[{\"kind\": \"toolInvocationSerialized\"}, {\"kind\": \"toolInvocationSerialized\"}]"}
+{"kind": 1, "k": ["requests", 0, "modelState"], "v": "{\"value\": 1, \"completedAt\": 1771236600000}"}
+{"kind": 1, "k": ["requests", 0, "elapsedMs"], "v": "60000"}
+not json

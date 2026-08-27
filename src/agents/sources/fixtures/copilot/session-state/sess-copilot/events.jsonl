@@ -1,0 +1,7 @@
+{"type":"session.start","timestamp":"2026-02-16T10:00:00.100Z","data":{"sessionId":"sess-copilot","context":{"cwd":"/Users/demo/git-activity"}}}
+{"type":"user.message","timestamp":"2026-02-16T10:00:10.000Z","data":{"content":"Fix the login redirect","transformedContent":"<current_datetime/>Fix the login redirect"}}
+{"type":"assistant.turn_start","timestamp":"2026-02-16T10:00:11.000Z","data":{"model":"claude-sonnet-4.6"}}
+{"type":"tool.execution_start","timestamp":"2026-02-16T10:00:12.000Z","data":{"name":"str_replace"}}
+{"type":"assistant.message","timestamp":"2026-02-16T10:00:20.000Z","data":{"content":"Done."}}
+{"type":"user.message","timestamp":"2026-02-16T10:44:00.000Z","data":{"content":"Also add a test"}}
+{"type":"assistant.message","timestamp":"2026-02-16T10:45:00.000Z","data":{"content":"Added."}}
