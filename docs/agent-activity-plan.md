@@ -34,7 +34,7 @@ Enter a row → session list for that project/day (source, title, duration, mode
 
 These are the defaults unless we change them during implementation:
 
-1. **Separate command, shared date flags.** Do not mix git commits and agent sessions in one table yet. Combining later is a follow-up.
+1. **Separate command, shared date flags.** Do not mix git commits and agent sessions in one table yet. Combining later is a follow-up. *(Done: `git-activity all` merges them; `agents` stays as-is.)*
 2. **Group by project (cwd), tag by agent.** Git groups by repo. Agents group by working directory. Agent name is a label, like branch is today.
 3. **Hours come from session timestamps, then merge overlaps.** Do not reuse the git 2-hour-gap heuristic as the primary signal. An agent session already *is* a work session. If two agents ran on the same project in overlapping windows, merge intervals so the day total is not double-counted.
 4. **Local files only.** No GitHub / Cursor Cloud / Copilot Chronicle APIs in v1. Cloud agents that leave a local transcript (Cursor `agent-transcripts`) are included; purely remote history is not.
@@ -293,7 +293,8 @@ Do not wait for phase 4 to merge 1–3. Each phase should be shippable.
 
 ## Out of scope (v1)
 
-- Merged git + agent week view
+- ~~Merged git + agent week view~~ — shipped as `git-activity all`; see the
+  Combined activity section of the README.
 - Cloud-only history (Cursor Cloud dashboard, Copilot Chronicle sync, Claude Desktop web chats)
 - Token/cost totals
 - JetBrains Copilot, Windsurf, Cline, Aider, OpenCode, Gemini CLI

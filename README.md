@@ -7,6 +7,7 @@ A Bun-based CLI tool that scans directories for git repositories and generates w
 - Recursive git repository discovery with configurable depth
 - Work time estimation based on commit timestamps
 - Interactive TUI with keyboard navigation
+- Combined git + AI-agent week, with overlapping time counted once
 - GitHub-style activity heatmap
 - Export to CSV and Markdown formats
 - Repository caching for faster subsequent runs
@@ -138,16 +139,66 @@ bun run src/index.ts agents --select
 
 Hours come from session timestamps with a 15-minute minimum. Overlapping sessions on the same project are merged so two agents on one afternoon are not double-counted. Reports include metadata and truncated user prompts only — never assistant text or tool output.
 
+## Combined activity
+
+`git-activity all` folds both reports into one week: commits and agent sessions,
+grouped by repository. Agent sessions are attributed to the git repo that
+contains their working directory, so work on one project shows up as one row no
+matter which directory the agent ran from.
+
+```bash
+# Current week of git + agent work
+bun run src/index.ts all
+
+# Last week, exported
+bun run src/index.ts all -w 1 --export md
+
+# Machine-readable (scan progress goes to stderr, so stdout stays pure JSON)
+bun run src/index.ts all --json
+```
+
+```
+╭─────────────────────────────────────────────────────────────────────────────
+│ Week: Feb 16 - Feb 22, 2026                                  (Current Week)
+│ ────────────────────────────────────────────────────────────────────────────
+│ Thursday, Feb 19
+│ ├── git-activity (~/Developer/too...  ~1.4h  2 commits  4 sessions  [claude]
+│ └── api-service (~/Developer/proj...  ~5.5h  0 commits  4 sessions  [cursor]
+│ ────────────────────────────────────────────────────────────────────────────
+│ Weekly Total: ~6.9h across 2 projects (2 commits, 8 sessions)
+│ Git ~1h · Agents ~6.6h · ~0.7h overlapped and counted once
+```
+
+Pressing `Enter` opens the day as a single chronological timeline, so a session
+and the commits it produced sit next to each other:
+
+```
+│   time        source         what                                    hrs/sha
+│ ────────────────────────────────────────────────────────────────────────────
+│ ▸ 14:17       commit         feat: add activity stats and commit ... a7a72b3
+│   14:22-14:38 claude         the new agents command does not work...   ~0.3h
+│   16:19       commit         feat: complete agent source adapters... 48fa096
+│
+│ Estimated: ~1.4h  ·  2 commits  ·  4 sessions  ·  [claude]
+│ Git ~1h and agents ~1.1h overlap; shared time counted once.
+```
+
+**Hours are not the sum of the two reports.** Git intervals and agent intervals
+are merged, so a commit made inside a session window is counted once. The footer
+shows each side's own total next to the merged one. `Enter` on a commit opens the
+commit detail; `Enter` on a session opens the session detail.
+
 ## Interactive Navigation
 
-The TUI has three levels: **week view** → **commit list** → **commit detail**.
+The TUI has three levels: **week view** → **commit list** (or **timeline**, under
+`all`) → **detail**.
 
-| Key | Week view | Commit list | Commit detail |
-|-----|-----------|-------------|---------------|
-| `↑` / `↓` | Navigate rows | Navigate commits | — |
+| Key | Week view | Commit list / timeline | Detail |
+|-----|-----------|------------------------|--------|
+| `↑` / `↓` | Navigate rows | Navigate entries | — |
 | `←` / `→` | Previous / next week | — | — |
-| `Enter` | Open commit list for selected day | Open commit detail | — |
-| `Esc` / `Backspace` | — | Back to week view | Back to commit list |
+| `Enter` | Open the selected day | Open the entry's detail | — |
+| `Esc` / `Backspace` | — | Back to week view | Back to the list |
 | `q` | Quit | Quit | Quit |
 
 ## Global Installation
@@ -186,6 +237,7 @@ The tool analyzes commit timestamps within each day and estimates work sessions:
 ```
 src/
 ├── index.ts           # Entry point, Commander setup
+├── report.ts          # Git weekly report + heatmap builders (shared by commands)
 ├── dates.ts           # Shared week / date-range parsing
 ├── scanner.ts         # Git repository discovery
 ├── git.ts             # Git log parsing
@@ -194,6 +246,7 @@ src/
 ├── export.ts          # CSV/Markdown report generation
 ├── types.ts           # TypeScript interfaces
 ├── agents/            # Agent activity (detection, source adapters, report)
+├── combined/          # Combined git + agent report (matching, hours, export)
 └── ui/
     ├── App.tsx           # Main Ink component, keyboard input, week navigation
     ├── WeekView.tsx      # Weekly summary table
@@ -203,7 +256,11 @@ src/
     ├── AgentPicker.tsx   # First-run / --select multi-select
     ├── SessionList.tsx   # Agent sessions for a project/day, grouped by source
     ├── SessionDetail.tsx # Session metadata and user prompts only
+    ├── CombinedApp.tsx   # Combined week TUI
+    ├── CombinedWeekView.tsx # Combined weekly summary
+    ├── TimelineView.tsx  # One project/day as interleaved commits and sessions
     ├── sessionRows.ts    # Session grouping, column widths, scroll windows
+    ├── timelineRows.ts   # Timeline column widths and row cells
     ├── format.ts         # Shared truncation and model-name formatting
     ├── DayDetail.tsx     # Daily breakdown (unused/legacy)
     ├── Heatmap.tsx       # Activity heatmap

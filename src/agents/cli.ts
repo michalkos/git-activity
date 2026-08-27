@@ -157,7 +157,12 @@ export async function runAgentsCommand(options: AgentsCliOptions): Promise<void>
   );
 }
 
-async function resolveEnabledSources(
+/**
+ * Picks the agent sources to read: `--agents` flag, then saved config, then the
+ * first-run picker. Returns null when the user cancelled the picker.
+ * Shared with the combined report so both commands honour the same selection.
+ */
+export async function resolveEnabledSources(
   options: AgentsCliOptions,
   detections: DetectedAgent[]
 ): Promise<AgentSourceId[] | null> {
