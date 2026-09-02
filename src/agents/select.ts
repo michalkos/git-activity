@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { join } from "node:path";
 import { CACHE_DIR } from "../cache.ts";
 import {
+  AGENT_SOURCE_IDS,
   isAgentSourceId,
   type AgentConfig,
   type AgentSourceId,
@@ -48,7 +49,7 @@ export function parseAgentIds(raw: string): AgentSourceId[] {
   const unknown = ids.filter((id) => !isAgentSourceId(id));
   if (unknown.length > 0) {
     throw new Error(
-      `Unknown agent${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}. Known: claude, cursor, pi, codex, copilot, vscode-copilot`
+      `Unknown agent${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}. Known: ${AGENT_SOURCE_IDS.join(", ")}`
     );
   }
 

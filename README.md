@@ -121,7 +121,7 @@ bun run src/index.ts --clear-cache        # Remove cached repo list
 
 ## Agent activity
 
-`git-activity agents` is a sibling report for **local AI-agent sessions** from Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, and Cursor. Git remains the default command.
+`git-activity agents` is a sibling report for **local AI-agent sessions** from Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, Cursor, and OpenCode. Git remains the default command.
 
 ```bash
 # Current week of agent sessions

@@ -5,6 +5,7 @@ export const AGENT_SOURCE_IDS = [
   "codex",
   "copilot",
   "vscode-copilot",
+  "opencode",
 ] as const;
 
 export type AgentSourceId = (typeof AGENT_SOURCE_IDS)[number];

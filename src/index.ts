@@ -12,6 +12,7 @@ import { buildGitHeatmapData, buildGitReport } from "./report.ts";
 import { getDateRange } from "./dates.ts";
 import { runAgentsCommand } from "./agents/cli.ts";
 import { runCombinedCommand } from "./combined/cli.ts";
+import { AGENT_SOURCE_IDS } from "./agents/types.ts";
 import type { GitRepo } from "./types.ts";
 
 const program = new Command();
@@ -51,7 +52,7 @@ program
   .option("-e, --export <format>", "Export to file (csv or md)")
   .option("--select", "Pick which detected agents to include")
   .option("--list", "Print detection table and exit")
-  .option("--agents <ids>", "Comma-separated agent ids (claude,cursor,pi,codex,copilot,vscode-copilot)")
+  .option("--agents <ids>", `Comma-separated agent ids (${AGENT_SOURCE_IDS.join(",")})`)
   .action(async (options) => {
     try {
       await runAgentsCommand(options);
@@ -73,7 +74,7 @@ program
   .option("-e, --export <format>", "Export to file (csv or md)")
   .option("-r, --refresh", "Force rescan repositories (ignore cache)")
   .option("--select", "Pick which detected agents to include")
-  .option("--agents <ids>", "Comma-separated agent ids (claude,cursor,pi,codex,copilot,vscode-copilot)")
+  .option("--agents <ids>", `Comma-separated agent ids (${AGENT_SOURCE_IDS.join(",")})`)
   .action(async (options) => {
     try {
       await runCombinedCommand(options);

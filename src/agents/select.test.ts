@@ -13,6 +13,7 @@ describe("parseAgentIds", () => {
       "pi",
       "cursor",
     ]);
+    expect(parseAgentIds("opencode")).toEqual(["opencode"]);
   });
 
   test("rejects unknown ids", () => {
