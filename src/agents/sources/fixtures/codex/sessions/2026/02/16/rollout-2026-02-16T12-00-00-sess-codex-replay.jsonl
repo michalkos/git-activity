@@ -1,0 +1,5 @@
+{"timestamp":"2026-02-16T12:00:00.000Z","type":"session_meta","payload":{"session_id":"sess-codex-replay","cwd":"/Users/demo/api","originator":"codex_cli"}}
+{"timestamp":"2026-02-16T12:00:01.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>ignored</environment_context>"}]}}
+{"timestamp":"2026-02-16T12:00:02.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Title from the replayed transcript"}]}}
+{"timestamp":"2026-02-16T12:20:00.000Z","type":"response_item","payload":{"type":"function_call","name":"shell"}}
+{"timestamp": "2026-02-16T12:21:00.000Z", "type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "Done."}]}}

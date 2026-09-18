@@ -36,5 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Exported reports
 git-activity-*.csv
 git-activity-*.md
+agent-activity-*.csv
+agent-activity-*.md
 
 plans/

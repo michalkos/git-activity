@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { GitRepo, RepoCache } from "./types.ts";
 
-const CACHE_DIR = join(process.env.HOME || "", ".git-activity");
+export const CACHE_DIR = join(process.env.HOME || "", ".git-activity");
 const CACHE_FILE = join(CACHE_DIR, "repos.json");
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 

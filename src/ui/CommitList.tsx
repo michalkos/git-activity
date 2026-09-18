@@ -2,6 +2,7 @@ import { Box, Text } from "ink";
 import { useInput } from "ink";
 import { format } from "date-fns";
 import type { DayActivity, GitCommit, GitRepo } from "../types.ts";
+import { truncate } from "./format.ts";
 
 interface CommitListProps {
   repo: GitRepo;
@@ -126,7 +127,3 @@ function groupCommitsByBranch(commits: GitCommit[]): BranchGroup[] {
   return groups;
 }
 
-function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + "...";
-}
