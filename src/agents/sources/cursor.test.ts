@@ -122,5 +122,9 @@ describe("cursor adapter", () => {
     expect(await source.getUserPrompts(sessions[0]!)).toEqual([
       "Fix the login\nredirect",
     ]);
+    expect(await source.getUserPrompt(sessions[0]!, 0)).toBe(
+      "Fix the login\nredirect"
+    );
+    expect(await source.getUserPrompt(sessions[0]!, 99)).toBeNull();
   });
 });

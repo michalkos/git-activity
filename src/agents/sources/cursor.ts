@@ -3,12 +3,13 @@ import { join } from "node:path";
 import { warnAdapter } from "../log.ts";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import {
+  collectUserTexts,
   fileTimes,
+  nthUserText,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  overlapsRange,
   titleFrom,
-  truncate,
 } from "./common.ts";
 import { isDirectory } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
@@ -75,7 +76,7 @@ export function createCursorSource(
       for (const entry of await listSessionDirs(projectsDir)) {
         try {
           const times = await sessionTimes(entry.sessionDir);
-          if (!times || !startedInRange(times.startedAt, from, to)) {
+          if (!times || !overlapsRange(times.startedAt, times.endedAt, from, to)) {
             continue;
           }
 
@@ -122,17 +123,21 @@ export function createCursorSource(
         return [];
       }
       try {
-        const prompts: string[] = [];
-        for await (const line of readJsonLines<CursorLine>(session.sourceRef)) {
-          const text = line.role === "user" ? userText(line) : null;
-          if (text) {
-            prompts.push(truncate(text, PROMPT_MAX));
-          }
-        }
-        return prompts;
+        return await collectUserTexts(session.sourceRef, userPromptText, PROMPT_MAX);
       } catch (error) {
         warnAdapter("cursor", `failed to read prompts for ${session.id}${reason(error)}`);
         return [];
+      }
+    },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef) {
+        return null;
+      }
+      try {
+        return await nthUserText(session.sourceRef, userPromptText, index);
+      } catch (error) {
+        warnAdapter("cursor", `failed to read prompt ${index} for ${session.id}${reason(error)}`);
+        return null;
       }
     },
   };
@@ -263,6 +268,10 @@ async function readTranscript(filePath: string): Promise<TranscriptStats> {
  * Cursor wraps prompts as `<timestamp>...</timestamp><user_query>...</user_query>`
  * and reuses the user role for tool results, which are dropped here.
  */
+function userPromptText(line: CursorLine): string | null {
+  return line.role === "user" ? userText(line) : null;
+}
+
 function userText(line: CursorLine): string | null {
   const content = line.message?.content;
   const raw =

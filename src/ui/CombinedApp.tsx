@@ -1,3 +1,4 @@
+import { sessionKey } from "../agents/session.ts";
 import { useState, useCallback } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import type { AgentSession } from "../agents/types.ts";
@@ -17,6 +18,7 @@ interface CombinedAppProps {
   buildReport: (weekOffset: number) => Promise<CombinedWeeklyReport>;
   buildHeatmapData: (weekOffset: number) => Promise<HeatmapData[]>;
   loadPrompts: (session: AgentSession) => Promise<string[]>;
+  loadPrompt: (session: AgentSession, index: number) => Promise<string | null>;
 }
 
 export function CombinedApp({
@@ -26,6 +28,7 @@ export function CombinedApp({
   buildReport,
   buildHeatmapData,
   loadPrompts,
+  loadPrompt,
 }: CombinedAppProps) {
   const { exit } = useApp();
   const [navState, navActions] = useCombinedNavigation();
@@ -82,7 +85,10 @@ export function CombinedApp({
         setWeekOffset(newOffset);
         loadWeek(newOffset);
       }
-    } else if (key.escape || (key.backspace && !input)) {
+    } else if (
+      navState.viewState.view !== "session-detail" &&
+      (key.escape || (key.backspace && !input))
+    ) {
       navActions.goBack();
     }
   });
@@ -120,7 +126,7 @@ export function CombinedApp({
             if (entry.kind === "commit") {
               navActions.selectCommit(projectPath, date, entry.commit.hash);
             } else {
-              navActions.selectSession(projectPath, date, entry.session.id);
+              navActions.selectSession(projectPath, date, sessionKey(entry.session));
             }
           }}
         />
@@ -153,13 +159,15 @@ export function CombinedApp({
     const { date, sessionId } = viewState;
     const session = currentProject?.days
       .get(date)
-      ?.sessions.find((candidate) => candidate.id === sessionId);
+      ?.sessions.find((candidate) => sessionKey(candidate) === sessionId);
 
     if (session) {
       return (
         <SessionDetail
           session={session}
           loadPrompts={loadPrompts}
+          loadPrompt={loadPrompt}
+          onBack={navActions.goBack}
           terminalWidth={terminalWidth}
           terminalHeight={terminalHeight}
         />

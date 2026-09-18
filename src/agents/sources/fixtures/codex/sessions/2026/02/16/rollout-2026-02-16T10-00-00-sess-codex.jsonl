@@ -1,6 +1,8 @@
 {"timestamp":"2026-02-16T10:00:00.000Z","type":"session_meta","payload":{"session_id":"sess-codex","cwd":"/Users/demo/git-activity","originator":"codex_cli"}}
 {"timestamp":"2026-02-16T10:00:01.000Z","type":"turn_context","payload":{"cwd":"/Users/demo/git-activity","model":"gpt-5.6-sol"}}
 {"timestamp":"2026-02-16T10:00:05.000Z","type":"event_msg","payload":{"type":"user_message","message":"Fix the login redirect"}}
+{"timestamp": "2026-02-16T10:00:05.000Z", "type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Fix the login redirect\nExtra IDE context"}]}}
 {"timestamp":"2026-02-16T10:00:06.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"shell"}}
 {"timestamp":"2026-02-16T10:00:30.000Z","type":"event_msg","payload":{"type":"agent_message","message":"Done."}}
+{"timestamp": "2026-02-16T10:00:30.000Z", "type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "Done."}]}}
 {"timestamp":"2026-02-16T10:45:00.000Z","type":"event_msg","payload":{"type":"user_message","message":"Also add a test"}}

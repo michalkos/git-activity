@@ -1,3 +1,4 @@
+import type { AgentActivity } from "../types.ts";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createInterface } from "node:readline";
@@ -80,14 +81,39 @@ export async function fileTimes(
   }
 }
 
-/** Sessions belong to the day they started on, matching how git commits are bucketed. */
-export function startedInRange(
+/** Includes sessions resumed during the range even if they were created earlier. */
+export function overlapsRange(
   startedAt: Date,
+  endedAt: Date,
   from: Date,
   to: Date
 ): boolean {
-  const key = formatDateKey(startedAt);
-  return key >= formatDateKey(from) && key <= formatDateKey(to);
+  return formatDateKey(startedAt) <= formatDateKey(to) &&
+    formatDateKey(endedAt) >= formatDateKey(from);
+}
+
+/** Retains daily bounds and counts without retaining transcript content. */
+export class DailyActivity {
+  private days = new Map<string, AgentActivity>();
+
+  add(timestamp: Date | undefined, counts: Partial<Pick<AgentActivity, "userTurns" | "assistantTurns" | "toolCalls">> = {}) {
+    if (!timestamp) return;
+    const key = formatDateKey(timestamp);
+    const day = this.days.get(key) ?? {
+      startedAt: timestamp, endedAt: timestamp,
+      userTurns: 0, assistantTurns: 0, toolCalls: 0,
+    };
+    if (timestamp < day.startedAt) day.startedAt = timestamp;
+    if (timestamp > day.endedAt) day.endedAt = timestamp;
+    day.userTurns += counts.userTurns ?? 0;
+    day.assistantTurns += counts.assistantTurns ?? 0;
+    day.toolCalls += counts.toolCalls ?? 0;
+    this.days.set(key, day);
+  }
+
+  values(): AgentActivity[] {
+    return [...this.days.values()];
+  }
 }
 
 /** Session titles land in single-line table rows and CSV cells. */
@@ -100,6 +126,49 @@ export function truncate(value: string, maxLength: number): string {
     return value;
   }
   return value.slice(0, maxLength - 3) + "...";
+}
+
+/**
+ * Collects extracted user texts from a JSONL transcript. Pass `cap` to truncate
+ * each string for the session-detail index; omit it for the full text.
+ */
+export async function collectUserTexts<T>(
+  filePath: string,
+  extract: (line: T) => string | null,
+  cap?: number
+): Promise<string[]> {
+  const prompts: string[] = [];
+  for await (const line of readJsonLines<T>(filePath)) {
+    const text = extract(line);
+    if (!text) {
+      continue;
+    }
+    prompts.push(cap === undefined ? text : truncate(text, cap));
+  }
+  return prompts;
+}
+
+/** Untruncated text at `index` in extract order; null when the index does not exist. */
+export async function nthUserText<T>(
+  filePath: string,
+  extract: (line: T) => string | null,
+  index: number
+): Promise<string | null> {
+  if (!Number.isInteger(index) || index < 0) {
+    return null;
+  }
+  let seen = 0;
+  for await (const line of readJsonLines<T>(filePath)) {
+    const text = extract(line);
+    if (!text) {
+      continue;
+    }
+    if (seen === index) {
+      return text;
+    }
+    seen += 1;
+  }
+  return null;
 }
 
 /**

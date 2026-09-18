@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createClaudeSource } from "./claude.ts";
+import { PROMPT_MAX, truncate } from "./common.ts";
 
 const fixtureProjects = join(import.meta.dir, "fixtures", "claude", "projects");
 
@@ -51,10 +52,16 @@ describe("claude adapter", () => {
       new Date(2026, 1, 16),
       new Date(2026, 1, 22, 23, 59, 59, 999)
     );
-    const prompts = await source.getUserPrompts(sessions[0]!);
-    expect(prompts).toEqual([
+    const session = sessions[0]!;
+    const full = await source.getUserPrompt(session, 1);
+    expect(full?.length).toBeGreaterThan(PROMPT_MAX);
+    expect(await source.getUserPrompts(session)).toEqual([
       "Fix the login redirect on the dashboard",
-      "Also add a test",
+      truncate(full!, PROMPT_MAX),
     ]);
+    expect(await source.getUserPrompt(session, 0)).toBe(
+      "Fix the login redirect on the dashboard"
+    );
+    expect(await source.getUserPrompt(session, 99)).toBeNull();
   });
 });

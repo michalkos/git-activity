@@ -3,13 +3,16 @@ import { join } from "node:path";
 import { warnAdapter } from "../log.ts";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import {
+  collectUserTexts,
   isWrappedPrompt,
+  nthUserText,
   parseTimestamp,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  isUntouchedSince,
+  overlapsRange,
+  DailyActivity,
   titleFrom,
-  truncate,
 } from "./common.ts";
 import { countMatchingFiles, isDirectory } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
@@ -18,10 +21,10 @@ import type { AgentSession } from "../types.ts";
 /**
  * Codex CLI / Desktop sessions.
  * Layout: ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl — the date shards make range
- * scans cheap, so only the days in range are opened.
+ * scans skip future shards and files untouched since the requested range.
  * Lines are { timestamp, type, payload }: `session_meta` carries session_id + cwd,
  * `turn_context` the model, `event_msg` the user/assistant turns, `response_item`
- * the tool calls.
+ * the tool calls and, in Desktop rollouts, the user/assistant messages.
  * Titles come from ~/.codex/session_index.jsonl (id -> thread_name) when present.
  */
 
@@ -87,7 +90,7 @@ export function createCodexSource(options: CodexSourceOptions = {}): AgentSource
       for (const filePath of await listRolloutFiles(sessionsDir, from, to)) {
         try {
           const session = await parseSession(filePath, names);
-          if (session && startedInRange(session.startedAt, from, to)) {
+          if (session && overlapsRange(session.startedAt, session.endedAt, from, to)) {
             sessions.push(session);
           }
         } catch (error) {
@@ -102,17 +105,23 @@ export function createCodexSource(options: CodexSourceOptions = {}): AgentSource
         return [];
       }
       try {
-        const prompts: string[] = [];
-        for await (const line of readJsonLines<CodexLine>(session.sourceRef)) {
-          const text = userMessage(line);
-          if (text) {
-            prompts.push(truncate(text, PROMPT_MAX));
-          }
-        }
-        return prompts;
+        const events = await messageEvents(session.sourceRef);
+        return await collectUserTexts<CodexLine>(session.sourceRef, (line) => userMessage(line, !events.user), PROMPT_MAX);
       } catch (error) {
         warnAdapter("codex", `failed to read prompts for ${session.id}${reason(error)}`);
         return [];
+      }
+    },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef) {
+        return null;
+      }
+      try {
+        const events = await messageEvents(session.sourceRef);
+        return await nthUserText<CodexLine>(session.sourceRef, (line) => userMessage(line, !events.user), index);
+      } catch (error) {
+        warnAdapter("codex", `failed to read prompt ${index} for ${session.id}${reason(error)}`);
+        return null;
       }
     },
   };
@@ -132,13 +141,12 @@ async function loadThreadNames(indexPath: string): Promise<Map<string, string>> 
   return names;
 }
 
-/** Walks the YYYY/MM/DD shards and keeps only the days overlapping the range. */
+/** Older shards may contain resumed sessions; skip only future or untouched files. */
 async function listRolloutFiles(
   sessionsDir: string,
   from: Date,
   to: Date
 ): Promise<string[]> {
-  const lower = new Date(from.getTime() - DAY_MS);
   const upper = new Date(to.getTime() + DAY_MS);
   const files: string[] = [];
 
@@ -150,7 +158,7 @@ async function listRolloutFiles(
           Number(month) - 1,
           Number(day)
         );
-        if (Number.isNaN(shard.getTime()) || shard < lower || shard > upper) {
+        if (Number.isNaN(shard.getTime()) || shard > upper) {
           continue;
         }
         const dir = join(sessionsDir, year, month, day);
@@ -162,7 +170,11 @@ async function listRolloutFiles(
           continue;
         }
         for (const entry of entries) {
-          if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+          if (
+            entry.isFile() &&
+            entry.name.endsWith(".jsonl") &&
+            !(await isUntouchedSince(join(dir, entry.name), from))
+          ) {
             files.push(join(dir, entry.name));
           }
         }
@@ -194,17 +206,19 @@ async function parseSession(
   let lastTimestamp: Date | undefined;
   let firstPrompt: string | undefined;
   let firstRealPrompt: string | undefined;
-  let firstItemPrompt: string | undefined;
   let userTurns = 0;
   let assistantTurns = 0;
   let toolCalls = 0;
   let model: string | undefined;
   let malformed = false;
+  const activity = new DailyActivity();
+  const events = await messageEvents(filePath);
 
   for await (const line of readJsonLines<CodexLine>(filePath, () => {
     malformed = true;
   })) {
     const timestamp = parseTimestamp(line.timestamp);
+    activity.add(timestamp);
     if (timestamp) {
       firstTimestamp ??= timestamp;
       lastTimestamp = timestamp;
@@ -225,32 +239,26 @@ async function parseSession(
       cwd ??= payload.cwd;
       continue;
     }
-    if (line.type === "event_msg") {
-      if (payload.type === "user_message") {
-        const text = userMessage(line);
-        if (text) {
-          userTurns += 1;
-          firstPrompt ??= text;
-          if (!isWrappedPrompt(text)) {
-            firstRealPrompt ??= text;
-          }
-        }
-      } else if (payload.type === "agent_message") {
-        assistantTurns += 1;
+    const text = userMessage(line, !events.user);
+    if (text) {
+      userTurns += 1;
+      activity.add(timestamp, { userTurns: 1 });
+      firstPrompt ??= text;
+      if (!isWrappedPrompt(text)) {
+        firstRealPrompt ??= text;
       }
-      continue;
     }
-    if (line.type === "response_item") {
-      if (isToolCall(payload.type)) {
-        toolCalls += 1;
-      } else if (payload.type === "message" && payload.role === "user") {
-        // Compacted or resumed rollouts can lack `user_message` events entirely;
-        // the replayed transcript is then the only source of a usable title.
-        const text = inputText(payload.content);
-        if (text && !isWrappedPrompt(text)) {
-          firstItemPrompt ??= text;
-        }
-      }
+    if (
+      (line.type === "event_msg" && payload.type === "agent_message") ||
+      (!events.assistant && line.type === "response_item" &&
+        payload.type === "message" && payload.role === "assistant")
+    ) {
+      assistantTurns += 1;
+      activity.add(timestamp, { assistantTurns: 1 });
+    }
+    if (line.type === "response_item" && isToolCall(payload.type)) {
+      toolCalls += 1;
+      activity.add(timestamp, { toolCalls: 1 });
     }
   }
 
@@ -270,7 +278,6 @@ async function parseSession(
       names.get(id) ||
         firstRealPrompt ||
         firstPrompt ||
-        firstItemPrompt ||
         basenameId(filePath)
     ),
     projectPath,
@@ -282,6 +289,7 @@ async function parseSession(
     toolCalls,
     model,
     sourceRef: filePath,
+    activity: activity.values(),
   };
 }
 
@@ -293,8 +301,27 @@ function isToolCall(payloadType: string | undefined): boolean {
   );
 }
 
-/** Prompts the user actually typed; the `response_item` copies repeat them with IDE context. */
-function userMessage(line: CodexLine): string | null {
+/** Prefer event messages when present so transcript copies are not counted twice. */
+async function messageEvents(filePath: string) {
+  let user = false;
+  let assistant = false;
+  for await (const line of readJsonLines<CodexLine>(filePath)) {
+    if (line.type !== "event_msg") continue;
+    user ||= line.payload?.type === "user_message";
+    assistant ||= line.payload?.type === "agent_message";
+    if (user && assistant) break;
+  }
+  return { user, assistant };
+}
+
+function userMessage(line: CodexLine, useTranscript = false): string | null {
+  if (useTranscript && line.type === "response_item" &&
+    line.payload?.type === "message" && line.payload.role === "user") {
+    const text = inputText(line.payload.content);
+    return text && !isWrappedPrompt(text) && !text.startsWith("# AGENTS.md instructions")
+      ? text
+      : null;
+  }
   if (line.type !== "event_msg" || line.payload?.type !== "user_message") {
     return null;
   }

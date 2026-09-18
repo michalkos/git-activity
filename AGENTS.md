@@ -45,7 +45,7 @@ bun run src/index.ts all --json
 
 `git-activity all` is a third pipeline layered on the other two: build the git report and the agent report for the same range → attribute each agent cwd to the deepest git repo containing it (`combined/match.ts`) → merge both sides' time intervals per project/day so shared time is counted once → TUI / export. `combined/report.ts` also produces the day timeline (commits and sessions interleaved). The git report builders moved to `src/report.ts` so both `index.ts` and `combined/cli.ts` use them.
 
-Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools → filter by `~/.git-activity/agents.json` → each adapter lists sessions → group by project cwd → merge overlapping intervals → TUI / export. All seven sources parse sessions: Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, Cursor, and OpenCode. Each adapter lives in its own file under `src/agents/sources/` with a fixture test, reads local session stores without loading full transcripts, and reports a broken file as a warning so one bad source never fails the report. Shared parsing helpers live in `sources/common.ts`. OpenCode reads `~/.local/share/opencode/opencode.db` (SQLite) rather than JSONL.
+Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools → filter by `~/.git-activity/agents.json` → each adapter lists sessions → group by project cwd → merge overlapping intervals → TUI / export. All seven sources parse sessions: Claude Code, Pi, Codex, GitHub Copilot CLI, VS Code Copilot Chat, Cursor, and OpenCode. Each adapter lives in its own file under `src/agents/sources/` with a fixture test, reads local session stores without loading full transcripts, and reports a broken file as a warning so one bad source never fails the report. `getUserPrompts` returns 200-character previews; `getUserPrompt(session, index)` loads one prompt untruncated for the reader. Shared parsing helpers live in `sources/common.ts`. OpenCode reads `~/.local/share/opencode/opencode.db` (SQLite) rather than JSONL.
 
 ### UI Components (Ink/React)
 - `App.tsx`: Root component, handles view state switching and keyboard input
@@ -54,7 +54,7 @@ Agent activity (`git-activity agents`) is a sibling pipeline: detect local tools
 - `Heatmap.tsx`: GitHub-style activity visualization
 - `useNavigation.ts`: Keyboard navigation state management hook
 - `CombinedApp.tsx` / `CombinedWeekView.tsx` / `TimelineView.tsx`: the `all` command's week and day views. The timeline reuses `CommitDetail` and `SessionDetail` for level three, picking one by row kind; its column maths live in `timelineRows.ts`.
-- `SessionList.tsx` / `SessionDetail.tsx`: Agent day and session views; their layout maths (source grouping, column widths, scroll windows) live in `sessionRows.ts` so the components stay declarative. Columns are ASCII and sized against `terminalWidth - 4` — ambiguous-width glyphs break the alignment.
+- `SessionList.tsx` / `SessionDetail.tsx`: Agent day and session views; their layout maths (source grouping, column widths, scroll windows, prompt wrapping) live in `sessionRows.ts` so the components stay declarative. Columns are ASCII and sized against `terminalWidth - 4` — ambiguous-width glyphs break the alignment. Enter on a prompt opens an untruncated reader (`getUserPrompt`); `y` copies. Esc from the reader returns to the list without a fourth navigation view.
 
 ### Key Types (`types.ts`)
 - `WeeklyReport`: Top-level report containing `ProjectActivity[]`

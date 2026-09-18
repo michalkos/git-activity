@@ -1,5 +1,5 @@
+import { sessionDays, sessionInterval } from "../agents/session.ts";
 import {
-  intervalWithMinimum,
   totalHours,
   type TimeInterval,
 } from "../agents/hours.ts";
@@ -233,7 +233,7 @@ export function buildCombinedHeatmapData(
   };
 
   commits.forEach((commit) => bump(commit.date));
-  sessions.forEach((session) => bump(session.startedAt));
+  sessions.flatMap(sessionDays).forEach((session) => bump(session.startedAt));
 
   return buildHeatmapCells(counts, weekOffset);
 }
@@ -249,7 +249,7 @@ function gitIntervals(day: DayActivity): TimeInterval[] {
 
 function agentIntervals(sessions: AgentSession[]): TimeInterval[] {
   return sessions.map((session) =>
-    intervalWithMinimum(session.startedAt, session.endedAt)
+    sessionInterval(session)
   );
 }
 

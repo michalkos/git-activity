@@ -128,6 +128,9 @@ describe("opencode adapter", () => {
 
     const v1 = sessions.find((entry) => entry.id === "sess-v1-only")!;
     expect(await source.getUserPrompts(v1)).toEqual(["Migrate the leftover row"]);
+    expect(await source.getUserPrompt(login, 1)).toBe("Also add a test");
+    expect(await source.getUserPrompt(v1, 0)).toBe("Migrate the leftover row");
+    expect(await source.getUserPrompt(login, 99)).toBeNull();
   });
 
   test("unreadable database warns and returns no sessions", async () => {

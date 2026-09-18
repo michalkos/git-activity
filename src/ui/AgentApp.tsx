@@ -1,3 +1,4 @@
+import { sessionKey } from "../agents/session.ts";
 import { useState, useCallback } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import type { AgentSession, AgentWeeklyReport } from "../agents/types.ts";
@@ -16,6 +17,7 @@ interface AgentAppProps {
   buildReport: (weekOffset: number) => Promise<AgentWeeklyReport>;
   buildHeatmapData: (weekOffset: number) => Promise<HeatmapData[]>;
   loadPrompts: (session: AgentSession) => Promise<string[]>;
+  loadPrompt: (session: AgentSession, index: number) => Promise<string | null>;
 }
 
 export function AgentApp({
@@ -26,6 +28,7 @@ export function AgentApp({
   buildReport,
   buildHeatmapData,
   loadPrompts,
+  loadPrompt,
 }: AgentAppProps) {
   const { exit } = useApp();
   const [navState, navActions] = useAgentNavigation();
@@ -84,10 +87,7 @@ export function AgentApp({
           loadWeek(newOffset);
         }
       }
-    } else if (
-      navState.viewState.view === "sessions" ||
-      navState.viewState.view === "session-detail"
-    ) {
+    } else if (navState.viewState.view === "sessions") {
       if (key.escape || (key.backspace && !input)) {
         navActions.goBack();
       }
@@ -130,13 +130,15 @@ export function AgentApp({
   if (navState.viewState.view === "session-detail") {
     const { projectPath, date, sessionId } = navState.viewState;
     const project = report.projects.find((p) => p.projectPath === projectPath);
-    const session = project?.days.get(date)?.sessions.find((s) => s.id === sessionId);
+    const session = project?.days.get(date)?.sessions.find((s) => sessionKey(s) === sessionId);
 
     if (session) {
       return (
         <SessionDetail
           session={session}
           loadPrompts={loadPrompts}
+          loadPrompt={loadPrompt}
+          onBack={navActions.goBack}
           terminalWidth={terminalWidth}
           terminalHeight={terminalHeight}
         />

@@ -60,5 +60,7 @@ describe("copilot cli adapter", () => {
       "Fix the login redirect",
       "Also add a test",
     ]);
+    expect(await source.getUserPrompt(session!, 1)).toBe("Also add a test");
+    expect(await source.getUserPrompt(session!, 99)).toBeNull();
   });
 });

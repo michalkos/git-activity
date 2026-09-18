@@ -1,3 +1,4 @@
+import { sessionKey } from "../agents/session.ts";
 import { format } from "date-fns";
 import type { TimelineEntry } from "../combined/types.ts";
 import { sessionHours } from "./sessionRows.ts";
@@ -97,9 +98,9 @@ export function timelineCells(entry: TimelineEntry): TimelineCells {
   };
 }
 
-/** Stable key for a timeline row; hashes and session ids are unique within a day. */
+/** Stable key for a timeline row; includes the source and rollout for sessions. */
 export function timelineKey(entry: TimelineEntry): string {
   return entry.kind === "commit"
     ? `commit:${entry.commit.hash}`
-    : `session:${entry.session.id}`;
+    : `session:${sessionKey(entry.session)}`;
 }

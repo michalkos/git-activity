@@ -23,6 +23,14 @@ export interface DetectedAgent {
   detection: Detection;
 }
 
+export interface AgentActivity {
+  startedAt: Date;
+  endedAt: Date;
+  userTurns: number;
+  assistantTurns: number;
+  toolCalls: number;
+}
+
 export interface AgentSession {
   id: string;
   source: AgentSourceId;
@@ -35,6 +43,10 @@ export interface AgentSession {
   assistantTurns: number;
   toolCalls: number;
   model?: string;
+  /** Timestamped activity by local day, when the source provides event times. */
+  activity?: AgentActivity[];
+  /** Estimated interval clipped to the report day, with the minimum applied once. */
+  estimatedInterval?: { start: Date; end: Date };
   /** Adapter-private pointer used to load prompts for the detail view. */
   sourceRef?: string;
 }

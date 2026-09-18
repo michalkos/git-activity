@@ -5,7 +5,7 @@ import { expandHome, homeDir, projectNameFromPath } from "../paths.ts";
 import {
   isWrappedPrompt,
   PROMPT_MAX,
-  startedInRange,
+  overlapsRange,
   titleFrom,
   truncate,
 } from "./common.ts";
@@ -91,7 +91,11 @@ export function createOpenCodeSource(
       }
       try {
         return (
-          withDb(ref.dbPath, (db) => readUserPrompts(db, ref.sessionId)) ?? []
+          withDb(ref.dbPath, (db) =>
+            readUserPrompts(db, ref.sessionId).map((text) =>
+              truncate(text, PROMPT_MAX)
+            )
+          ) ?? []
         );
       } catch (error) {
         warnAdapter(
@@ -99,6 +103,26 @@ export function createOpenCodeSource(
           `failed to read prompts for ${session.id}${reason(error)}`
         );
         return [];
+      }
+    },
+    async getUserPrompt(session, index) {
+      const ref = parseSourceRef(session.sourceRef);
+      if (!ref || index < 0) {
+        return null;
+      }
+      try {
+        return (
+          withDb(
+            ref.dbPath,
+            (db) => readUserPrompts(db, ref.sessionId)[index] ?? null
+          ) ?? null
+        );
+      } catch (error) {
+        warnAdapter(
+          "opencode",
+          `failed to read prompt ${index} for ${session.id}${reason(error)}`
+        );
+        return null;
       }
     },
   };
@@ -146,7 +170,7 @@ function readSessions(
       .query(
         `SELECT ${SESSION_COLUMNS} FROM ${table}
          WHERE ${ROOT_SESSION}
-           AND time_created >= ?
+           AND time_updated >= ?
            AND time_created <= ?`
       )
       .all(lower, upper) as SessionRow[];
@@ -162,7 +186,7 @@ function readSessions(
   const inRange: SessionRow[] = [];
   for (const row of rows) {
     const startedAt = msToDate(row.time_created);
-    if (!startedAt || !startedInRange(startedAt, from, to)) {
+    if (!startedAt || !overlapsRange(startedAt, msToDate(row.time_updated) ?? startedAt, from, to)) {
       continue;
     }
     inRange.push(row);
@@ -414,7 +438,7 @@ function readUserPrompts(db: Database, sessionId: string): string[] {
     for (const row of rows) {
       const text = userTextFromV2(row.data);
       if (text) {
-        prompts.push(truncate(text, PROMPT_MAX));
+        prompts.push(text);
       }
     }
   }
@@ -433,7 +457,7 @@ function readUserPrompts(db: Database, sessionId: string): string[] {
     for (const row of rows) {
       const text = userTextFromV1Part(row.data);
       if (text) {
-        prompts.push(truncate(text, PROMPT_MAX));
+        prompts.push(text);
       }
     }
   }

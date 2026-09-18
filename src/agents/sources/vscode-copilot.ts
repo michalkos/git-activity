@@ -8,7 +8,7 @@ import {
   parseTimestamp,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  overlapsRange,
   titleFrom,
   truncate,
 } from "./common.ts";
@@ -121,7 +121,7 @@ export function createVscodeCopilotSource(
               continue;
             }
             const session = toSession(parsed, chat);
-            if (session && startedInRange(session.startedAt, from, to)) {
+            if (session && overlapsRange(session.startedAt, session.endedAt, from, to)) {
               sessions.push(session);
             }
           } catch (error) {
@@ -140,11 +140,9 @@ export function createVscodeCopilotSource(
         return [];
       }
       try {
-        const parsed = await parseChat(session.sourceRef);
-        return (parsed?.requests ?? [])
-          .map((request) => request.message?.text?.trim())
-          .filter((text): text is string => Boolean(text))
-          .map((text) => truncate(text, PROMPT_MAX));
+        return (await promptTexts(session.sourceRef)).map((text) =>
+          truncate(text, PROMPT_MAX)
+        );
       } catch (error) {
         warnAdapter(
           "vscode-copilot",
@@ -153,7 +151,29 @@ export function createVscodeCopilotSource(
         return [];
       }
     },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef) {
+        return null;
+      }
+      try {
+        const texts = await promptTexts(session.sourceRef);
+        return index < 0 ? null : (texts[index] ?? null);
+      } catch (error) {
+        warnAdapter(
+          "vscode-copilot",
+          `failed to read prompt ${index} for ${session.id}${reason(error)}`
+        );
+        return null;
+      }
+    },
   };
+}
+
+async function promptTexts(filePath: string): Promise<string[]> {
+  const parsed = await parseChat(filePath);
+  return (parsed?.requests ?? [])
+    .map((request) => request.message?.text?.trim())
+    .filter((text): text is string => Boolean(text));
 }
 
 interface ChatFile {

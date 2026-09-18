@@ -51,5 +51,7 @@ describe("pi adapter", () => {
       '<skill name="testing">wrapped context</skill>',
       "Fix the\nlogin redirect",
     ]);
+    expect(await source.getUserPrompt(session!, 1)).toBe("Fix the\nlogin redirect");
+    expect(await source.getUserPrompt(session!, 99)).toBeNull();
   });
 });

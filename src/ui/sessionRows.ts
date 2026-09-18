@@ -1,4 +1,5 @@
-import { intervalWithMinimum, roundHours } from "../agents/hours.ts";
+import { sessionInterval } from "../agents/session.ts";
+import { roundHours } from "../agents/hours.ts";
 import type { AgentSession, AgentSourceId } from "../agents/types.ts";
 
 /** Layout arithmetic for the agent session views, kept out of the components. */
@@ -133,9 +134,9 @@ export function scrollWindow({
   return { start, end, above: start, below: total - end };
 }
 
-/** Session length after the 15-minute minimum, rounded the way the report rounds. */
+/** Session estimate for this day, rounded the way the report rounds. */
 export function sessionHours(session: AgentSession): number {
-  const interval = intervalWithMinimum(session.startedAt, session.endedAt);
+  const interval = sessionInterval(session);
   return roundHours(interval.end.getTime() - interval.start.getTime());
 }
 
@@ -154,9 +155,28 @@ export function daySummary(sessions: AgentSession[]): DaySummary {
   for (const session of sessions) {
     userTurns += session.userTurns;
     toolCalls += session.toolCalls;
-    const interval = intervalWithMinimum(session.startedAt, session.endedAt);
+    const interval = sessionInterval(session);
     rawMs += interval.end.getTime() - interval.start.getTime();
   }
 
   return { userTurns, toolCalls, rawHours: roundHours(rawMs) };
+}
+
+/**
+ * Hard-wraps at `width` so a prompt reader can scroll by whole terminal lines.
+ * Newlines in the source are kept; empty input is one blank line.
+ */
+export function wrapLines(text: string, width: number): string[] {
+  const w = Math.max(width, 1);
+  const lines: string[] = [];
+  for (const paragraph of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (paragraph.length === 0) {
+      lines.push("");
+      continue;
+    }
+    for (let i = 0; i < paragraph.length; i += w) {
+      lines.push(paragraph.slice(i, i + w));
+    }
+  }
+  return lines.length > 0 ? lines : [""];
 }

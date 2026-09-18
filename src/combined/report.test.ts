@@ -198,3 +198,19 @@ describe("matchRepo", () => {
     expect(matchRepo("/Users/demo/notes", repos)).toBeNull();
   });
 });
+
+
+test("merges a continued session with commits on the following day", () => {
+  const report = buildCombinedReport({
+    gitReport: gitReportOf(REPO, [commit("overnight", "2026-02-17T00:30:00")]),
+    agentReport: buildAgentReport([
+      session("continued", "codex", REPO.path, "2026-02-16T23:00:00", "2026-02-17T01:00:00"),
+    ], WEEK_START, WEEK_END),
+    repos: [REPO],
+  });
+  const tuesday = report.projects[0]!.days.get("2026-02-17")!;
+  expect(tuesday.agentHours).toBe(1);
+  expect(tuesday.estimatedHours).toBe(1);
+  expect(report.totalHours).toBe(2);
+  expect(timelineEntries(tuesday).map((entry) => entry.kind)).toEqual(["session", "commit"]);
+});

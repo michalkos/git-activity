@@ -66,5 +66,7 @@ describe("vscode copilot chat adapter", () => {
       "Fix the login redirect",
       "Also add a test",
     ]);
+    expect(await source.getUserPrompt(snapshot, 1)).toBe("Also add a test");
+    expect(await source.getUserPrompt(snapshot, 99)).toBeNull();
   });
 });

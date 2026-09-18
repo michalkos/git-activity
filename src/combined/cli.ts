@@ -112,6 +112,11 @@ export async function runCombinedCommand(options: CombinedCliOptions): Promise<v
     return source ? source.getUserPrompts(session) : [];
   };
 
+  const loadPrompt = async (session: AgentSession, index: number) => {
+    const source = sourcesById.get(session.source);
+    return source ? source.getUserPrompt(session, index) : null;
+  };
+
   render(
     React.createElement(CombinedApp, {
       initialReport: report,
@@ -130,6 +135,7 @@ export async function runCombinedCommand(options: CombinedCliOptions): Promise<v
       buildHeatmapData: (weekOffset: number) =>
         buildHeatmap({ repos, authors, sources: enabledSources, weekOffset }),
       loadPrompts,
+      loadPrompt,
     })
   );
 }

@@ -1,8 +1,9 @@
+import { sessionDays, sessionInterval, sessionKey } from "./session.ts";
 import { addDays, endOfWeek, startOfWeek, subWeeks } from "date-fns";
 import { calculateIntensity } from "../ui/Heatmap.tsx";
 import { formatDateKey } from "../time-estimator.ts";
 import type { HeatmapData } from "../types.ts";
-import { intervalWithMinimum, totalHours } from "./hours.ts";
+import { totalHours } from "./hours.ts";
 import { warnAdapter } from "./log.ts";
 import type { AgentSource } from "./sources/types.ts";
 import type {
@@ -39,13 +40,17 @@ export function buildAgentReport(
   startDate: Date,
   endDate: Date
 ): AgentWeeklyReport {
-  const inRange = sessions.filter((session) =>
+  const inRange = sessions.flatMap(sessionDays).filter((session) =>
     isDateKeyInRange(session.startedAt, startDate, endDate)
   );
 
   const projects = new Map<string, AgentProjectActivity>();
 
+  const seen = new Set<string>();
   for (const session of inRange) {
+    const key = sessionKey(session);
+    if (seen.has(key)) continue;
+    seen.add(key);
     const project =
       projects.get(session.projectPath) ??
       ({
@@ -83,7 +88,7 @@ export function buildAgentReport(
       );
       day.estimatedHours = totalHours(
         day.sessions.map((session) =>
-          intervalWithMinimum(session.startedAt, session.endedAt)
+          sessionInterval(session)
         )
       );
       day.sources = uniqueSources(day.sessions);
@@ -128,7 +133,7 @@ export function buildAgentHeatmapData(
   const endDate = endOfWeek(targetWeekStart, { weekStartsOn: 1 });
 
   const sessionsByDate = new Map<string, number>();
-  for (const session of sessions) {
+  for (const session of sessions.flatMap(sessionDays)) {
     if (!isDateKeyInRange(session.startedAt, threeWeeksAgo, endDate)) {
       continue;
     }

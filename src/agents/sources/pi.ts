@@ -3,14 +3,16 @@ import { basename, join } from "node:path";
 import { warnAdapter } from "../log.ts";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import {
+  collectUserTexts,
   isUntouchedSince,
   isWrappedPrompt,
+  nthUserText,
   parseTimestamp,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  overlapsRange,
+  DailyActivity,
   titleFrom,
-  truncate,
 } from "./common.ts";
 import { countMatchingFiles, isDirectory } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
@@ -78,7 +80,7 @@ export function createPiSource(options: PiSourceOptions = {}): AgentSource {
             continue;
           }
           const session = await parseSession(filePath);
-          if (session && startedInRange(session.startedAt, from, to)) {
+          if (session && overlapsRange(session.startedAt, session.endedAt, from, to)) {
             sessions.push(session);
           }
         } catch (error) {
@@ -93,17 +95,21 @@ export function createPiSource(options: PiSourceOptions = {}): AgentSource {
         return [];
       }
       try {
-        const prompts: string[] = [];
-        for await (const event of readJsonLines<PiEvent>(session.sourceRef)) {
-          const text = userText(event);
-          if (text) {
-            prompts.push(truncate(text, PROMPT_MAX));
-          }
-        }
-        return prompts;
+        return await collectUserTexts(session.sourceRef, userText, PROMPT_MAX);
       } catch (error) {
         warnAdapter("pi", `failed to read prompts for ${session.id}${reason(error)}`);
         return [];
+      }
+    },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef) {
+        return null;
+      }
+      try {
+        return await nthUserText(session.sourceRef, userText, index);
+      } catch (error) {
+        warnAdapter("pi", `failed to read prompt ${index} for ${session.id}${reason(error)}`);
+        return null;
       }
     },
   };
@@ -163,11 +169,13 @@ async function parseSession(filePath: string): Promise<AgentSession | null> {
   let toolCalls = 0;
   let model: string | undefined;
   let malformed = false;
+  const activity = new DailyActivity();
 
   for await (const event of readJsonLines<PiEvent>(filePath, () => {
     malformed = true;
   })) {
     const timestamp = parseTimestamp(event.timestamp);
+    activity.add(timestamp);
     if (timestamp) {
       firstTimestamp ??= timestamp;
       lastTimestamp = timestamp;
@@ -194,6 +202,7 @@ async function parseSession(filePath: string): Promise<AgentSession | null> {
       const text = userText(event);
       if (text) {
         userTurns += 1;
+        activity.add(timestamp, { userTurns: 1 });
         firstPrompt ??= text;
         if (!isWrappedPrompt(text)) {
           firstRealPrompt ??= text;
@@ -201,7 +210,10 @@ async function parseSession(filePath: string): Promise<AgentSession | null> {
       }
     } else if (event.message?.role === "assistant") {
       assistantTurns += 1;
-      toolCalls += countToolUses(event);
+      activity.add(timestamp, { assistantTurns: 1 });
+      const tools = countToolUses(event);
+      toolCalls += tools;
+      activity.add(timestamp, { toolCalls: tools });
     }
   }
 
@@ -228,6 +240,7 @@ async function parseSession(filePath: string): Promise<AgentSession | null> {
     toolCalls,
     model,
     sourceRef: filePath,
+    activity: activity.values(),
   };
 }
 

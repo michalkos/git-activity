@@ -144,6 +144,14 @@ export async function runAgentsCommand(options: AgentsCliOptions): Promise<void>
     return source.getUserPrompts(session);
   };
 
+  const loadPrompt = async (session: AgentSession, index: number) => {
+    const source = sourcesById.get(session.source);
+    if (!source) {
+      return null;
+    }
+    return source.getUserPrompt(session, index);
+  };
+
   render(
     React.createElement(AgentApp, {
       initialReport: report,
@@ -153,6 +161,7 @@ export async function runAgentsCommand(options: AgentsCliOptions): Promise<void>
       buildReport: buildReportFn,
       buildHeatmapData: buildHeatmapFn,
       loadPrompts,
+      loadPrompt,
     })
   );
 }

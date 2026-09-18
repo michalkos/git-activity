@@ -9,6 +9,7 @@ import {
   scrollWindow,
   sessionColumnWidths,
   sessionHours,
+  wrapLines,
 } from "./sessionRows.ts";
 
 function session(
@@ -146,5 +147,13 @@ describe("truncate", () => {
       "Build failure due..."
     );
     expect(truncate("anything", 0)).toBe("");
+  });
+});
+
+describe("wrapLines", () => {
+  test("hard-wraps at width and keeps source newlines", () => {
+    expect(wrapLines("hello world", 5)).toEqual(["hello", " worl", "d"]);
+    expect(wrapLines("a\n\nb", 10)).toEqual(["a", "", "b"]);
+    expect(wrapLines("", 10)).toEqual([""]);
   });
 });

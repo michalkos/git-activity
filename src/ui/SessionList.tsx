@@ -1,3 +1,4 @@
+import { sessionKey } from "../agents/session.ts";
 import { Box, Text, useInput } from "ink";
 import { format } from "date-fns";
 import type { AgentDayActivity, AgentProjectActivity } from "../agents/types.ts";
@@ -71,7 +72,7 @@ export function SessionList({
     } else if (key.return && sessionCount > 0) {
       const selected = ordered[selectedIndex];
       if (selected) {
-        onSelectSession(selected.id);
+        onSelectSession(sessionKey(selected));
       }
     }
   });
@@ -118,7 +119,7 @@ export function SessionList({
 
                 return (
                   <Box
-                    key={session.id}
+                    key={sessionKey(session)}
                     width={contentWidth}
                     backgroundColor={isSelected ? "blue" : undefined}
                   >

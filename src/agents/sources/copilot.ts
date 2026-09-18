@@ -3,12 +3,14 @@ import { join } from "node:path";
 import { warnAdapter } from "../log.ts";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import {
+  collectUserTexts,
+  nthUserText,
   parseTimestamp,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  overlapsRange,
+  DailyActivity,
   titleFrom,
-  truncate,
 } from "./common.ts";
 import { countMatchingFiles, isDirectory, pathExists } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
@@ -91,19 +93,31 @@ export function createCopilotSource(
         return [];
       }
       try {
-        const prompts: string[] = [];
-        for await (const event of readJsonLines<CopilotEvent>(session.sourceRef)) {
-          if (event.type === "user.message" && event.data?.content) {
-            prompts.push(truncate(event.data.content.trim(), PROMPT_MAX));
-          }
-        }
-        return prompts;
+        return await collectUserTexts(session.sourceRef, userText, PROMPT_MAX);
       } catch (error) {
         warnAdapter("copilot", `failed to read prompts for ${session.id}${reason(error)}`);
         return [];
       }
     },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef || !(await pathExists(session.sourceRef))) {
+        return null;
+      }
+      try {
+        return await nthUserText(session.sourceRef, userText, index);
+      } catch (error) {
+        warnAdapter("copilot", `failed to read prompt ${index} for ${session.id}${reason(error)}`);
+        return null;
+      }
+    },
   };
+}
+
+function userText(event: CopilotEvent): string | null {
+  if (event.type !== "user.message" || !event.data?.content) {
+    return null;
+  }
+  return event.data.content.trim() || null;
 }
 
 function resolveCopilotSessionDir(): string {
@@ -126,7 +140,7 @@ async function parseSession(
   }
 
   const startedAt = parseTimestamp(workspace.created_at);
-  if (!startedAt || !startedInRange(startedAt, from, to)) {
+  if (!startedAt) {
     return null;
   }
   const endedAt = parseTimestamp(workspace.updated_at) ?? startedAt;
@@ -139,6 +153,8 @@ async function parseSession(
   // updated_at moves whenever Copilot touches the session record — including days
   // later, when it is merely relisted — so the event log is the end of the work.
   const lastActivity = counts.lastEventAt ?? endedAt;
+
+  if (!overlapsRange(startedAt, lastActivity, from, to)) return null;
 
   const projectPath = workspace.cwd || "(unknown)";
   return {
@@ -156,6 +172,7 @@ async function parseSession(
     toolCalls: counts.toolCalls,
     model: counts.model,
     sourceRef: eventsPath,
+    activity: counts.activity.values().length ? counts.activity.values() : undefined,
   };
 }
 
@@ -166,6 +183,7 @@ interface TurnCounts {
   firstPrompt: string | undefined;
   model: string | undefined;
   lastEventAt: Date | undefined;
+  activity: DailyActivity;
 }
 
 function emptyCounts(): TurnCounts {
@@ -176,6 +194,7 @@ function emptyCounts(): TurnCounts {
     firstPrompt: undefined,
     model: undefined,
     lastEventAt: undefined,
+    activity: new DailyActivity(),
   };
 }
 
@@ -183,16 +202,21 @@ async function countTurns(eventsPath: string): Promise<TurnCounts> {
   const counts = emptyCounts();
 
   for await (const event of readJsonLines<CopilotEvent>(eventsPath)) {
+    const timestamp = parseTimestamp(event.timestamp);
+    counts.activity.add(timestamp);
     if (event.type === "user.message") {
       counts.userTurns += 1;
+      counts.activity.add(timestamp, { userTurns: 1 });
       const content = event.data?.content?.trim();
       if (content) {
         counts.firstPrompt ??= content;
       }
     } else if (event.type === "assistant.message") {
       counts.assistantTurns += 1;
+      counts.activity.add(timestamp, { assistantTurns: 1 });
     } else if (event.type === "tool.execution_start") {
       counts.toolCalls += 1;
+      counts.activity.add(timestamp, { toolCalls: 1 });
     }
     counts.model ??= event.data?.model;
     counts.lastEventAt = parseTimestamp(event.timestamp) ?? counts.lastEventAt;

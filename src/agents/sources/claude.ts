@@ -3,14 +3,16 @@ import { basename, join } from "node:path";
 import { expandHome, projectNameFromPath } from "../paths.ts";
 import { warnAdapter } from "../log.ts";
 import {
+  collectUserTexts,
   isUntouchedSince,
   isWrappedPrompt,
+  nthUserText,
   parseTimestamp,
   PROMPT_MAX,
   readJsonLines,
-  startedInRange,
+  overlapsRange,
+  DailyActivity,
   titleFrom,
-  truncate,
 } from "./common.ts";
 import { countMatchingFiles, isDirectory } from "./fs.ts";
 import type { AgentSource } from "./types.ts";
@@ -81,7 +83,7 @@ export function createClaudeSource(
           if (!parsed) {
             continue;
           }
-          if (startedInRange(parsed.session.startedAt, from, to)) {
+          if (overlapsRange(parsed.session.startedAt, parsed.session.endedAt, from, to)) {
             sessions.push(parsed.session);
           }
         } catch (error) {
@@ -99,13 +101,27 @@ export function createClaudeSource(
         return [];
       }
       try {
-        return await collectUserPrompts(session.sourceRef);
+        return await collectUserTexts(session.sourceRef, userPromptText, PROMPT_MAX);
       } catch (error) {
         warnAdapter(
           "claude",
           `failed to read prompts for ${session.id}${error instanceof Error ? `: ${error.message}` : ""}`
         );
         return [];
+      }
+    },
+    async getUserPrompt(session, index) {
+      if (!session.sourceRef) {
+        return null;
+      }
+      try {
+        return await nthUserText(session.sourceRef, userPromptText, index);
+      } catch (error) {
+        warnAdapter(
+          "claude",
+          `failed to read prompt ${index} for ${session.id}${error instanceof Error ? `: ${error.message}` : ""}`
+        );
+        return null;
       }
     },
   };
@@ -158,6 +174,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
   let toolCalls = 0;
   let model: string | undefined;
   let malformed = false;
+  const activity = new DailyActivity();
 
   for await (const event of readJsonLines<ClaudeEvent>(filePath, () => {
     malformed = true;
@@ -173,6 +190,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
     }
 
     const timestamp = parseTimestamp(event.timestamp);
+    activity.add(timestamp);
     if (timestamp) {
       firstTimestamp ??= timestamp;
       lastTimestamp = timestamp;
@@ -182,6 +200,7 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
       const text = extractUserText(event);
       if (text) {
         userTurns += 1;
+        activity.add(timestamp, { userTurns: 1 });
         firstUserPrompt ??= text;
         if (!isWrappedPrompt(text)) {
           firstRealPrompt ??= text;
@@ -189,7 +208,10 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
       }
     } else if (event.type === "assistant") {
       assistantTurns += 1;
-      toolCalls += countToolUses(event);
+      activity.add(timestamp, { assistantTurns: 1 });
+      const tools = countToolUses(event);
+      toolCalls += tools;
+      activity.add(timestamp, { toolCalls: tools });
       model = event.message?.model || event.model || model;
     }
   }
@@ -221,22 +243,13 @@ async function parseSessionMeta(filePath: string): Promise<SessionMeta | null> {
       toolCalls,
       model,
       sourceRef: filePath,
+      activity: activity.values(),
     },
   };
 }
 
-async function collectUserPrompts(filePath: string): Promise<string[]> {
-  const prompts: string[] = [];
-  for await (const event of readJsonLines<ClaudeEvent>(filePath)) {
-    if (event.type !== "user") {
-      continue;
-    }
-    const text = extractUserText(event);
-    if (text) {
-      prompts.push(truncate(text, PROMPT_MAX));
-    }
-  }
-  return prompts;
+function userPromptText(event: ClaudeEvent): string | null {
+  return event.type === "user" ? extractUserText(event) : null;
 }
 
 function extractUserText(event: ClaudeEvent): string | null {
